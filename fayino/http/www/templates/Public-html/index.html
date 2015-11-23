@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Public home page</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/foundation.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+</head>
+<body>
+<h1>This is the main home page for the public</h1>
+<a href="/signup/"><input class="btn btn-success" type="button" value="Sign Up" NAME="Sign Up"></a>
+<a href="/login/"><input class="btn btn-success" type="button" value="Log In" NAME="Log in"></a>
+</body>
+</html>
