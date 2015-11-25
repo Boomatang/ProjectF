@@ -14,6 +14,21 @@
 
 </head>
 <body>
+
+<section>
+    {% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+</section>
+
+
+
 <h1>This is the main home page for the public</h1>
 <a href="/signup/"><input class="btn btn-success" type="button" value="Sign Up" NAME="Sign Up"></a>
 <a href="/login/"><input class="btn btn-success" type="button" value="Log In" NAME="Log in"></a>
