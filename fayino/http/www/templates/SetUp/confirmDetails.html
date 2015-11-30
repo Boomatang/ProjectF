@@ -1,11 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Confirm Details</title>
-</head>
-<body>
-<h1>This is the confirm details page all user input details would be here.</h1>
-<a href="/signUpCompleted/"><input class="btn" type="button" name="Confirm Details" value="Confirm"></a>
-</body>
-</html>
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+<section>
+    <!--TODO more work is need here-->
+    {% for uv in user %}
+    {{ uv }}
+    {% endfor %}
+</section>
+<section>
+    {% for cv in company %}
+    {{ cv }}
+    {% endfor %}
+
+</section>
+
+
+{% endblock %}

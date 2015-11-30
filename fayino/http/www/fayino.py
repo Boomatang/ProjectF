@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, session
-from siteForms import AddressForm, Signup, Set_up_company
-from pymysql import escape_string as thwart
+from flask import Flask, render_template, request, flash, redirect, session
 from passlib.hash import sha256_crypt as crypt
+from pymysql import escape_string as thwart
+
 import sql_functions
+from siteForms import AddressForm, Signup, Set_up_company
 
 app = Flask(__name__)
 
@@ -47,7 +48,10 @@ def signUpComplated():
 
 @app.route("/confirmUserDetails/")
 def confirmUserSetupDetails():
-    return render_template("SetUp/confirmDetails.html")
+    user = sql_functions.get_uesr_details(session['userID'])
+    company = sql_functions.get_company_details(session['companyID'])
+
+    return render_template("SetUp/confirmDetails.html", user=user, company=company)
 
 
 @app.route('/companyDetails/', methods=['POST', 'GET'])
@@ -66,6 +70,7 @@ def setCompanyDetails():
 
             sql_functions.enter_company_detail(company)
             sql_functions.link_user_company(company[3], company[4])
+            session['companyID'] = company[4]
             return redirect('/confirmUserDetails/')
 
         else:

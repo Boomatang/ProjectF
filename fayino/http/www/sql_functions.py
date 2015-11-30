@@ -1,6 +1,8 @@
-import gc
-import pymysql
 import datetime
+import gc
+
+import pymysql
+
 
 def connection():
     """
@@ -160,3 +162,45 @@ def link_user_company(userID, companyID):
 
     c.execute(sql, data)
     conn_close(c, conn)
+
+
+def get_uesr_details(userID):
+    sql = 'SELECT * ' \
+          'FROM person_TBL ' \
+          'WHERE personID = %s'
+
+    data = (userID,)
+
+    c, conn = connection()
+    c.execute(sql, data)
+
+    values = c.fetchone()
+
+    if values[0] is not None:
+        output = values
+
+    else:
+        output = ('error',)
+
+    return output
+
+
+def get_company_details(companyID):
+    sql = 'SELECT * ' \
+          'FROM company_TBL ' \
+          'WHERE companyID = %s'
+
+    data = (companyID,)
+
+    c, conn = connection()
+    c.execute(sql, data)
+
+    values = c.fetchone()
+
+    if values[0] is not None:
+        output = values
+
+    else:
+        output = ('error',)
+
+    return output
