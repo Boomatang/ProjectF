@@ -1,23 +1,6 @@
-<!DOCTYPE html>
+{% extends "base/base.html" %}
 {% from "macros/formMacros.html" import form_field with context %}
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Sign up Page</title>
-
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/foundation.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-
-
-
-</head>
-<body>
-<h1>This is the sign up page</h1>
-<a href="/companyDetails/"><input class="btn" type="button" name="Next Step" value="NextStep"></a>
-
-
+{% block content %}
 <form id="FormTest" method="post">
 
     <table>
@@ -28,10 +11,6 @@
     {% endfor %}
 
     </table>
-    <input type="submit" name="Enter" value="Enter">
+    <input type="submit" name="Next Step" value="Enter">
 </form>
-
-
-
-</body>
-</html>
+{% endblock %}

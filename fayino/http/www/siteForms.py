@@ -47,10 +47,27 @@ class Signup(Form):
                                         validators.email()])
     password = PasswordField(u'Password',
                              validators=[validators.input_required(),
-                                         validators.EqualTo('confirm', message='Passwords must match')])
+                                         validators.EqualTo('confirm',
+                                                            message='Passwords must match')])
     confirm = PasswordField(u'ReType your Password',
                             validators=[validators.input_required()])
     # FIXME the href is not rendering out as it should there is no link been placed
     accept_terms = BooleanField(u'I accept the &lt;a href={{url_for(termsandcoditions)}}&gt;'
                                 u'Terms and Conditions&lt;/a&gt;.',
                                 validators=[validators.input_required()])
+
+
+class Set_up_company(Form):
+    """
+    This form is used to set up the ower's company
+    """
+
+    company_name = StringField(u'Company Name',
+                               validators=[validators.length(max=150)])
+    company_code = StringField(u'Set company',
+                               validators=[validators.length(max=150)])
+    company_type = SelectField(label='Company Type',
+                               choices=[('unknown', 'unknown'),
+                                        ('Arts & Crafts', 'ArtsandCrafts'),
+                                        ('More  to be added', 'more')],
+                               validators=[validators.input_required()])

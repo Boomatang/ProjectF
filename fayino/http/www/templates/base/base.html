@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ title }}{%endblock%}</title>
+
+    {% include "base/meta.html" ignore missing %}
+    {% include "base/scripts.html" ignore missing %}
+
+</head>
+<body>
+
+<div id="bodyWrapper" class="col-md-8 col-md-offset-2">
+    {% include "base/header.html" ignore missing %}
+    {% include "base/nav.html" ignore missing %}
+    {% block content %}<h2>Content is missing</h2>{% endblock %}
+    {% include "base/footer.html" ignore missing %}
+</div>
+
+</body>
+</html>

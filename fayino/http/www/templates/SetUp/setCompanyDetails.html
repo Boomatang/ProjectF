@@ -1,11 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Set Up Company Details</title>
-</head>
-<body>
-<h1>This is the set Up company page</h1>
-<a href="/confirmUserDetails/"><input class="btn" type="button" name="Next Step" value="NextStep"></a>
-</body>
-</html>
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+<form id="FormTest" method="post">
+
+    <table>
+    {% for field in form %}
+
+        {{form_field(field)}}
+
+    {% endfor %}
+
+    </table>
+    <input type="submit" name="Next Step" value="Enter">
+</form>
+{% endblock %}
