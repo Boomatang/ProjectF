@@ -3,16 +3,15 @@
 {% block content %}
 <section>
     <!--TODO more work is need here-->
-    {% for uv in user %}
-    {{ uv }}
-    {% endfor %}
-</section>
-<section>
-    {% for cv in company %}
-    {{ cv }}
-    {% endfor %}
-
+    <p>User Name: {{ user_data.userName }}</p>
+    <p>User Email: {{ user_data.email }}</p>
+    <p>User password: {{ user_data.password }}</p>
+    <p>Company Name: {{ user_data.companyName }}</p>
+    <p>Company Short Code: {{ user_data.companyShort }}</p>
 </section>
 
-
+<a href="{{ url_for('signUpComplated')}}"><input type="submit" name="confirm" value="Confirm Details">
+</a>
+<a href="{{ url_for('editSignUp') }}"><input type="submit" name="change" value="Change Details">
+</a>
 {% endblock %}

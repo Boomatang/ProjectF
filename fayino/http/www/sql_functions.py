@@ -164,6 +164,7 @@ def link_user_company(userID, companyID):
     conn_close(c, conn)
 
 
+# TODO these functions can be writen better
 def get_uesr_details(userID):
     sql = 'SELECT * ' \
           'FROM person_TBL ' \
@@ -185,12 +186,34 @@ def get_uesr_details(userID):
     return output
 
 
+# TODO these functions can be writen better
 def get_company_details(companyID):
     sql = 'SELECT * ' \
           'FROM company_TBL ' \
           'WHERE companyID = %s'
 
     data = (companyID,)
+
+    c, conn = connection()
+    c.execute(sql, data)
+
+    values = c.fetchone()
+
+    if values[0] is not None:
+        output = values
+
+    else:
+        output = ('error',)
+
+    return output
+
+
+def get_user_login_details(email):
+    sql = 'SELECT personID, password ' \
+          'FROM person_TBL ' \
+          'WHERE loginEmail = %s'
+
+    data = (email)
 
     c, conn = connection()
     c.execute(sql, data)

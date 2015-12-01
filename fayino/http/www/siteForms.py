@@ -47,6 +47,7 @@ class Signup(Form):
                                         validators.email()])
     password = PasswordField(u'Password',
                              validators=[validators.input_required(),
+                                         validators.length(min=5, max=120),
                                          validators.EqualTo('confirm',
                                                             message='Passwords must match')])
     confirm = PasswordField(u'ReType your Password',
@@ -71,3 +72,13 @@ class Set_up_company(Form):
                                         ('Arts & Crafts', 'ArtsandCrafts'),
                                         ('More  to be added', 'more')],
                                validators=[validators.input_required()])
+
+
+class LoginConfirm(Form):
+    userEmail = StringField(u'Email address',
+                            validators=[validators.input_required(),
+                                        validators.length(min=6, max=150),
+                                        validators.email()])
+    password = PasswordField(u'Password',
+                             validators=[validators.input_required(),
+                                         validators.length(min=5, max=120)])

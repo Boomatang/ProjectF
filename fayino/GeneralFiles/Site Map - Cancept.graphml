@@ -751,7 +751,6 @@
       </data>
     </node>
     <node id="n46">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="BevelNode">
           <y:Geometry height="30.0" width="226.859375" x="2254.4008680555557" y="170.0"/>
@@ -768,7 +767,6 @@
       </data>
     </node>
     <node id="n47">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="BevelNode">
           <y:Geometry height="30.0" width="226.859375" x="2311.115550595238" y="0.0"/>
@@ -1462,7 +1460,6 @@
       </data>
     </edge>
     <edge id="e54" source="n47" target="n46">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="15.0" tx="56.71484375" ty="-15.0"/>
@@ -1473,7 +1470,6 @@
       </data>
     </edge>
     <edge id="e55" source="n4" target="n46">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="56.71484375" sy="15.0" tx="-56.71484375" ty="-15.0">

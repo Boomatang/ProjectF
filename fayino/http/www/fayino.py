@@ -2,8 +2,10 @@ from flask import Flask, render_template, request, flash, redirect, session
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 
+import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
+from site_actions import login_action, check_session
 
 app = Flask(__name__)
 
@@ -41,17 +43,40 @@ def login():
 
 # ####################      Sign Up Related Pages        ########################
 
+@app.route('/editSignUp/')
+def editSignUp():
+    return render_template('Setup/editDetails.html')
+
+
 @app.route("/signUpCompleted/")
 def signUpComplated():
+
+    form = siteForms.LoginConfirm(request.form)
+    data, confirm = login_action(form)
+
+    if confirm:
+        check_session(data[0])
+        # get user object
+        # try login plugin
+
+
     return render_template("SetUp/signUpCompleted.html")
 
 
 @app.route("/confirmUserDetails/")
 def confirmUserSetupDetails():
+
     user = sql_functions.get_uesr_details(session['userID'])
     company = sql_functions.get_company_details(session['companyID'])
 
-    return render_template("SetUp/confirmDetails.html", user=user, company=company)
+    user_data = {'userName': user[3],
+                 'email': user[9],
+                 'password': '******',
+                 'companyName': company[1],
+                 'companyShort': company[2]}
+
+    return render_template("SetUp/confirmDetails.html",
+                           user_data=user_data)
 
 
 @app.route('/companyDetails/', methods=['POST', 'GET'])
@@ -97,8 +122,6 @@ def signup():
             session['user'] = crypt.encrypt(signUpForm[1])
             session['userID'] = userID
 
-            # TODO remove the next flash statement
-            flash(session['user'])
             flash('You are now signed up')
             return redirect('/companyDetails/')
 
