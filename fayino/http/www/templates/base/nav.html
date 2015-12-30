@@ -3,7 +3,12 @@
 <nav class="navbar navbar-inverse" role="navigation">
   <ul class="nav navbar-nav">
   {{ nav_link('publicHomePage', 'Home') }}
+  {{ nav_link('CreateJobPage', 'Create Job') }}
   {{ nav_link('publicHomePage', 'About') }}
   {{ nav_link('publicHomePage', 'Contact Us') }}
-</ul>
+
+  {% if session['logged_in'] %}
+  {{ nav_link('logout', 'Log out') }}
+  {% endif %}
+  </ul>
 </nav>

@@ -213,7 +213,7 @@ def get_user_login_details(email):
           'FROM person_TBL ' \
           'WHERE loginEmail = %s'
 
-    data = (email)
+    data = (email,)
 
     c, conn = connection()
     c.execute(sql, data)
@@ -225,5 +225,101 @@ def get_user_login_details(email):
 
     else:
         output = ('error',)
+
+    conn_close(c, conn)
+    return output
+
+
+def create_job(values=[]):
+    """
+    Create a job in the database, only basic information is add at this time and in the future more has to be added.
+    This function will break not all 4 values are passed in.
+    :param values: List of up to 4 values passed in as strings. 2 is the minimum required.
+    """
+    # FIXME This function will break not all 4 values are passed in.
+    current_year = datetime.date.today()
+    current_year = current_year.year
+
+    next_number = next_job_number(current_year)
+
+    sql = u'INSERT INTO job_TBL ' \
+          u'(jobIDyear, jobIDnum, title, description, entryDate, pTime, pCost)' \
+          u'VALUES (%s, %s, %s, %s, NOW(), %s, %s)'
+
+    hm = values[3]
+    h, m = hm.split(':')
+
+    ptime = (int(m) + (int(h) * 60)) * 60
+
+    data = (current_year, next_number, values[0], values[1], ptime, float(values[2]))
+
+    c, conn = connection()
+
+    c.execute(sql, data)
+
+    conn_close(c, conn)
+
+    job_number = (current_year, next_number)
+
+    return job_number
+
+
+def next_job_number(current_year):
+    """
+    Use to find the next job number for the for the year in question
+    :param current_year: In the format of a INT of length 4
+    :return: INT of unknown length
+    """
+    sql = u'SELECT MAX(jobIDnum) ' \
+          u'FROM job_TBL ' \
+          u'WHERE jobIDyear = %s'
+
+    data = (current_year,)
+
+    c, conn = connection()
+
+    c.execute(sql, data)
+
+    value = c.fetchone()
+
+    if value[0] is not None:
+        output = int(value[0]) + 1
+    else:
+        output = 1
+
+    conn_close(c, conn)
+
+    return output
+
+
+def get_job_details(job_number):
+
+    """
+    Used to bring all the information about the job number from the database
+    :param job_number: requires a tuple of 2 integers that are existing job number keys
+    :return: a set record from the database
+    """
+    # TODO add in a fix to check to see if the input keys are existing in the database.
+
+    sql = u'SELECT title, description, entryDate, pTime, pCost ' \
+          u'FROM job_TBL ' \
+          u'WHERE jobIDyear = %s ' \
+          u'AND jobIDnum = %s'
+
+    data = (job_number[0], job_number[1])
+
+    c, conn = connection()
+
+    c.execute(sql, data)
+
+    value = c.fetchone()
+
+    if value[0] is not None:
+        output = value
+
+    else:
+        output = None
+
+    conn_close(c, conn)
 
     return output

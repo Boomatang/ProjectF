@@ -1,18 +1,43 @@
+from functools import wraps
+
 from flask import Flask, render_template, request, flash, redirect, session
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
-
+#from flask_login import LoginManager, login_user, login_required, current_user
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
-from site_actions import login_action, check_session
+from site_actions import login_action, check_session, User
+
+
+# ####################      Set up        ########################
 
 app = Flask(__name__)
 
 app.secret_key = 'A0Zr98j/3yX R~XHH!jiugf098uhspuswfdsdN]LWX/,?RT'
+#login_manager = LoginManager()
+#login_manager.init_app(app)
+
+
+# ####################      wrappers        ########################
+
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return User.get_id(current_user)
 
 
 # ####################      Testing Related Pages        ########################
+
+def login_required(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session:
+            return f(*args, **kwargs)
+        else:
+            flash('You need to login in first..')
+            return redirect('/login/')
+
+    return wrap
 
 
 @app.route("/testing/", methods=['GET', 'POST'])
@@ -33,12 +58,81 @@ def testing():
     return render_template("jinja/child.html", form=form)
 
 
+# ####################      Private Related Pages        ########################
+
+@app.route('/home/')
+@login_required
+def private_home():
+    return render_template('private/index.html')
+
+
+# ####################      Job Related Pages        ########################
+
+@app.route('/createNewJob', methods=['POST', 'GET'])
+@login_required
+def CreateJobPage():
+
+    """
+    Code to make a job in the basic form is here
+    :return:
+    """
+    form = siteForms.JobCreate(request.form)
+    if request.method == 'POST':
+        title = thwart(form.name.data)
+        description = thwart(form.description.data)
+        cost = thwart(str(form.pCost.data))
+        length = thwart(str(form.pTime.data))
+
+        values = [title, description, cost, length]
+
+        job_number = sql_functions.create_job(values)
+
+        flash(values)
+        flash(job_number)
+
+    return render_template('private/jobs/create.html', form=form)
+
+
+
 # ####################      Login Related Pages        ########################
 
+@app.route("/logout/")
+@login_required
+def logout():
+    """
+    Should log a user out with out removing any session cookie inform.
+    This may need to be updated at a later date.
+    :return: Goes back to the public home page
+    """
+    session.pop('logged_in', None)
 
-@app.route("/login/")
+    flash('You have been logged out')
+    return redirect('/')
+
+
+@app.route("/login/", methods=['POST', 'GET'])
 def login():
-    return render_template("Login/login.html")
+    session.clear()
+    form = siteForms.LoginConfirm(request.form)
+    if request.method == 'POST':
+        data, confirm, input_email = login_action(form)
+
+        if confirm:
+            #check_session(input_email)
+            user = User(data[0])
+
+            session['user'] = user.id
+            session['logged_in'] = True
+
+            #login_user(user)
+
+            flash('Logged in successfully.')
+            return redirect('/home/')
+
+        else:
+            flash('Login details did not match.')
+
+    return render_template("Login/login.html", form=form)
 
 
 # ####################      Sign Up Related Pages        ########################
@@ -48,19 +142,29 @@ def editSignUp():
     return render_template('Setup/editDetails.html')
 
 
-@app.route("/signUpCompleted/")
+@app.route("/signUpCompleted/", methods=['POST', 'GET'])
 def signUpComplated():
 
     form = siteForms.LoginConfirm(request.form)
-    data, confirm = login_action(form)
+    if request.method == 'POST':
+        data, confirm, input_email = login_action(form)
 
-    if confirm:
-        check_session(data[0])
-        # get user object
-        # try login plugin
+        if confirm:
+            check_session(input_email)
+            user = User(data[0])
 
+            session['user'] = user.id
+            session['logged_in'] = True
 
-    return render_template("SetUp/signUpCompleted.html")
+            #login_user(user)
+
+            flash('Logged in successfully.')
+            return redirect('/home/')
+
+        else:
+            flash('Login details did not match.')
+
+    return render_template("SetUp/signUpCompleted.html", form=form)
 
 
 @app.route("/confirmUserDetails/")
@@ -137,7 +241,6 @@ def signup():
 
 
 @app.route('/')
-@app.route('/home/')
 def publicHomePage():
     return render_template("Public-html/index.html")
 

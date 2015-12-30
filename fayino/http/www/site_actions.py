@@ -9,20 +9,23 @@ from pymysql import escape_string as thwart
 def login_action(form):
 
     if request.method == 'POST' and form.validate():
-        user = thwart(form.userEmail.data())
-        password = thwart(form.password.data())
+        user = thwart(form.userEmail.data)
+        password = thwart(form.password.data)
 
         system_data = sql_functions.get_user_login_details(user)
 
         if crypt.verify(password, system_data[1]):
-            return system_data, True
+            return system_data, True, user
 
 
 def check_session(email):
 
     check = session['user']
     if crypt.verify(email, check):
-        count = session['count']
+        if 'count' in session:
+            count = session['count']
+        else:
+            count = 0
         session['count'] = 1 + int(count)
 
     else:
@@ -34,12 +37,15 @@ def check_session(email):
 
 class User(object):
 
-    data = sql_functions.get_uesr_details(userID)
+    def __init__(self, userID):
+        self.data = sql_functions.get_uesr_details(userID)
 
-    id = db.Column(db.Integer, primary_key=True)
-    nickname = db.Column(db.String(64), index=True, unique=True)
-    email = db.Column(db.String(120), index=True, unique=True)
-    posts = db.relationship('Post', backref='author', lazy='dynamic')
+        self.id = self.data[0]
+        self.email = self.data[9]
+        self.username = self.data[3]
+        self.f_name = self.data[1]
+        self.l_name = self.data[2]
+
 
     @property
     def is_authenticated(self):
@@ -57,4 +63,11 @@ class User(object):
         return str(self.id)
 
     def __repr__(self):
-        return '<User %r>' % (self.nickname)
+        return '<User %r>' % (self.username)
+
+
+class Job(object):
+
+    def __init__(self, job_number):
+        self.data = sql_functions.get_job_details(job_number)
+

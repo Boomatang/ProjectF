@@ -1,15 +1,25 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+
 <section>
 
-      <form class="form-container">
-<div class="form-title"><h2>Sign up</h2></div>
-<div class="form-title">Name</div>
-<input class="form-field" type="text" name="firstname" /><br />
-<div class="form-title">Email</div>
-<input class="form-field" type="text" name="email" /><br />
-<div class="submit-container">
-<input class="submit-button" type="submit" value="Submit" />
-</div>
+    <h1>Please Login</h1>
+
+
+    <form id="FormTest" method="post">
+
+    <table>
+    {% for field in form %}
+
+        {{form_field(field)}}
+
+    {% endfor %}
+
+    </table>
+    <input type="submit" name="Next Step" value="Enter">
 </form>
 
-
 </section>
+
+{% endblock %}

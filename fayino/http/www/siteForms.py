@@ -1,4 +1,5 @@
-from wtforms import Form, StringField, validators, SelectField, BooleanField, PasswordField
+from wtforms import Form, StringField, validators, SelectField, BooleanField, PasswordField, TextAreaField,\
+    DecimalField, DateTimeField
 
 
 #: Here you will find forms that can be used to take information form a user
@@ -82,3 +83,22 @@ class LoginConfirm(Form):
     password = PasswordField(u'Password',
                              validators=[validators.input_required(),
                                          validators.length(min=5, max=120)])
+
+
+class JobCreate(Form):
+
+    """
+    Form for making the basic job and the details that follows
+    """
+
+    name = StringField(u'Job Tittle',
+                       validators=[validators.input_required(),
+                                   validators.length(min=2, max=45)])
+    description = TextAreaField(u'Job description',
+                                validators=[validators.input_required()])
+
+    # TODO checks need to be put in place to make sure the format is right
+    pCost = DecimalField(label=u'Cost', places=2, rounding=None)
+
+    # TODO checks need to be put in place to make sure the format is right
+    pTime = StringField(label='Time')
