@@ -350,3 +350,57 @@ def get_all_job_numbers():
     conn_close(c, conn)
 
     return output
+
+
+def get_sudo_username():
+    """
+    Gets the default username for the adding of user to the company
+    """
+
+    sql = u'SELECT MAX(personID) ' \
+          u'FROM person_TBL '
+    c, conn = connection()
+
+    c.execute(sql)
+
+    value = c.fetchone()
+
+    if value is not None:
+        number = value[0]
+        number += 1
+
+        name = 'UserName' + str(number)
+
+    else:
+        name = 'UserName'
+
+    return name
+
+
+def add_user(data_set):
+    """
+    Make a new user. This would be do by the admin for the company
+    :param data_set:
+    """
+
+    c, conn = connection()
+
+    joinDate = datetime.date.today()
+    joinDate = str(joinDate.year) + "-" + str(joinDate.month) + "-" + str(joinDate.day)
+
+    sql2 = u'SELECT MAX(personID) ' \
+           u'FROM person_TBL'
+
+    c.execute(sql2)
+
+    personID = c.fetchone()
+    personID = personID[0] + 1
+
+    sql = u'INSERT INTO person_TBL ' \
+          u'(personID, userName, loginEmail, fName, lName, password, ' \
+          u'acceptTErms, joinDate) ' \
+          u'VALUES (%s, %s, %s, %s, %s, %s, %s)'
+
+    data = (str(personID), str(data_set[0]), str(data_set[1]), str(data_set[2]), str(data_set[3]), str(data_set[4]), str(joinDate), str(joinDate))
+    c.execute(sql, data)
+    conn_close(c, conn)

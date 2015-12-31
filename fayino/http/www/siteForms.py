@@ -103,10 +103,28 @@ class JobCreate(Form):
     pTime = StringField(label='Time')
 
 
-class JobMain(Form):
+class CreateNewUser(Form):
     """
-    Form used to pass values such as the timer start function. More hopefully will be added to this.
-    Or not this class should be looked at to see if it can be worked around.
+    This form will be used to add new users under the company name.
     """
+    first_name = StringField(u'First Name',
+                             validators=[validators.input_required(),
+                                         validators.length(min=3, max=100),
+                                         validators.Regexp(r'^[a-zA-Z0-9_]+$',
+                                                          message=(u"First name should be one word, letters,"))])
+    last_name = StringField(u'Last Name',
+                             validators=[validators.input_required(),
+                                         validators.length(min=3, max=100),
+                                         validators.Regexp(r'^[a-zA-Z0-9_]+$',
+                                                          message=(u"Last name should be one word, letters,"))])
 
-    job_number_sql = HiddenField()
+    user_name = StringField(u'User Name',
+                            validators=[validators.input_required(),
+                                        validators.length(min=6, max=100),
+                                        validators.Regexp(r'^[a-zA-Z0-9_]+$',
+                                                          message=(u"Username should be one word, letters,"
+                                                                   u"numbers, and underscores only."))])
+    userEmail = StringField(u'Email address',
+                            validators=[validators.input_required(),
+                                        validators.length(min=6, max=150),
+                                        validators.email()])

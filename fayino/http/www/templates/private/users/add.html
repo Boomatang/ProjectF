@@ -1,0 +1,24 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+
+
+<h1>Add user</h1>
+<p>Here we will add new user to the system. They will go under the same company name and will be set a random password. This password at a later date would be emailed to the user.</p>
+
+<form id="createUser" method="post">
+
+    <table >
+    <tr><td>{{ form.first_name.label.text }} </td><td> {{ form.first_name() }}</td></tr>
+    <tr><td>{{ form.last_name.label.text }} </td><td> {{ form.last_name() }}</td></tr>
+    <tr><td>{{ form.user_name.label.text }} </td><td> {{ form.user_name(value=user_name) }}</td></tr>
+    <tr><td>{{ form.userEmail.label.text }} </td><td> {{ form.userEmail() }}</td></tr>
+
+
+    </table>
+    <input type="submit" name="submit" value="Enter">
+</form>
+
+<p>For this email address the following password has been set: <strong>{{ password }}</strong></p>
+
+{% endblock %}

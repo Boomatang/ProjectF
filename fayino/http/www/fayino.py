@@ -1,3 +1,4 @@
+import datetime
 from functools import wraps
 from wtforms import Form
 from flask import Flask, render_template, request, flash, redirect, session, url_for
@@ -7,7 +8,7 @@ from pymysql import escape_string as thwart
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
-from site_actions import login_action, check_session, User, Job
+from site_actions import login_action, check_session, User, Job, password_gen
 
 
 # ####################      Set up        ########################
@@ -65,6 +66,47 @@ def testing():
 def private_home():
     return render_template('private/index.html')
 
+
+# ####################      User Related Pages        ########################
+
+@app.route('/user/review/', methods=['POST', 'GET'])
+@login_required
+def user_review():
+    return render_template('private/user/review.html')
+
+
+@app.route('/users/create', methods=['POST', 'GET'])
+@login_required
+def user_create():
+
+    form = siteForms.CreateNewUser(request.form)
+    user_name = sql_functions.get_sudo_username()
+    password = password_gen()
+
+    if request.method == 'POST' and form.validate():
+        new_user_name = thwart(form.user_name.data)
+        first_name = thwart(form.first_name.data)
+        last_name = thwart(form.last_name.data)
+        email = thwart(form.userEmail.data)
+        acceptDate = datetime.date.today()
+        acceptDate = str(acceptDate.year) + "-" + str(acceptDate.month) + "-" + str(acceptDate.day)
+
+        information = (new_user_name,
+                       email,
+                       first_name,
+                       last_name,
+                       crypt.encrypt(password))
+
+        if sql_functions.check_new_username_and_email(new_user_name, email):
+            sql_functions.add_user(information)
+            return redirect('/user/review/')
+        else:
+            flash('User name and or email has been used before')
+
+    return render_template('private/users/add.html',
+                           form=form,
+                           user_name=user_name,
+                           password=password)
 
 # ####################      Job Related Pages        ########################
 

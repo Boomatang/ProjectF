@@ -8,6 +8,18 @@ from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 
 
+import string
+from random import *
+
+
+def password_gen(min_char=8, max_char=14):
+
+    all_char = string.ascii_letters + string.punctuation + string.digits
+    password = "".join(choice(all_char) for x in range(randint(min_char, max_char)))
+
+    return password
+
+
 def login_action(form):
     if request.method == 'POST' and form.validate():
         user = thwart(form.userEmail.data)
