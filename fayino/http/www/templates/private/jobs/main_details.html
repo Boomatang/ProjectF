@@ -4,6 +4,25 @@
 
 <h1>Job Title: {{ job.title }}</h1>
 <h1>This page is for {{ job.job_number }}</h1>
+<p>{{ job.description }}</p>
+<section>
+<h2>Quoted times and values</h2>
+    <p>Time: {{ job.quoted_time() }}</p>
+    <p>Cost: &euro;{{ job.pCost }}</p>
+    <hr>
+    <h3>Values to Date:</h3>
+    <p>Total Time: {{ job.total_time }}</p>
+</section>
 
+<form id="Job" method="post">
 
+    <table>
+
+    </table>
+    {% if job.user_started_log(session['user']) %}
+    <input type="submit" name="timer" value="Stop">
+    {% else %}
+    <input type="submit" name="timer" value="Start">
+    {% endif %}
+</form>
 {% endblock %}

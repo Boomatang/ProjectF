@@ -1,6 +1,6 @@
 from functools import wraps
-
-from flask import Flask, render_template, request, flash, redirect, session
+from wtforms import Form
+from flask import Flask, render_template, request, flash, redirect, session, url_for
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 #from flask_login import LoginManager, login_user, login_required, current_user
@@ -84,7 +84,24 @@ def job_main_details(job_number):
 
     job = Job(job_number_sql)
 
-    return render_template('private/jobs/main_details.html', job=job)
+    form = Form(request.form)
+    if request.method == 'POST':
+        user = session['user']
+
+        if request.form['timer'] == 'Start':
+            start_time = job.start_time_entry(user)
+            flash(start_time.strftime('%Y/%m/%d %H:%M'))
+            flash(user)
+
+        elif request.form['timer'] == 'Stop':
+            finish_time = job.user_stop_log(user)
+            flash(finish_time.strftime('%Y/%m/%d %H:%M'))
+
+            flash(user)
+
+        return redirect(url_for('job_main_details', job_number=job.job_number))
+
+    return render_template('private/jobs/main_details.html', job=job, form=form)
 
 
 @app.route('/jobs/',  methods=['POST', 'GET'])

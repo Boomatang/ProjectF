@@ -1,6 +1,9 @@
+import datetime
+
 from flask import request, session, flash
 import siteForms
 import sql_functions
+from sql_functions import conn_close, connection
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 
@@ -76,6 +79,7 @@ class Job(object):
         self.pCost = self.data[4]
         self.job_number = self._format_job_number(job_number)
         self.job_number_sql = job_number
+        self.total_time = self.get_times()
 
     @staticmethod
     def _format_job_number(job):
@@ -101,3 +105,125 @@ class Job(object):
         # TODO work the time formatting, check pc for etxra
         return self.pTime
 
+    def start_time_entry(self, userID):
+        """
+        Method to start the job in the database
+        :param userID:
+        :return:
+        """
+        start = datetime.datetime.now()
+
+        sql = u'INSERT INTO job_time_log_TBL (' \
+              u'jobIDyear, jobIDnum, personID, startTime) ' \
+              u'VALUES (%s, %s, %s, %s)'
+        data = (self.job_number_sql[0], self.job_number_sql[1], userID, start)
+
+        c, conn = connection()
+        c.execute(sql, data)
+        conn_close(c, conn)
+
+        return start
+
+    def user_started_log(self, userID):
+        """
+        This function finds the  last time entry the user has started but not finished.
+        This works on the bases that there will ever only be one entry that is has a finish time that is null for that user.
+        :param userID:
+        """
+
+        sql = u'SELECT * ' \
+              u'FROM job_time_log_TBL ' \
+              u'WHERE personID = %s ' \
+              u'AND jobIDyear = %s ' \
+              u'AND jobIDnum = %s ' \
+              u'AND finishTime IS NULL'
+
+        data = (userID, self.job_number_sql[0], self.job_number_sql[1])
+
+        c, conn = connection()
+        c.execute(sql, data)
+
+        value = c.fetchone()
+
+        if value is not None:
+            output = True
+
+        else:
+            output = False
+
+        return output
+
+    def user_stop_log(self, userID):
+        """
+        This function will stop the running job time.
+        :param userID:
+        """
+        # TODO add in a fix to stop it trying to stop a job that is not running
+
+        finish_time = datetime.datetime.now()
+
+        sql = u'UPDATE job_time_log_TBL ' \
+              u'SET finishTime = %s, ' \
+              u'totalTime = %s ' \
+              u'WHERE job_time_log_ID = %s'
+
+        sql2 = u'SELECT job_time_log_ID, startTime ' \
+               u'FROM job_time_log_TBL ' \
+               u'WHERE personID = %s ' \
+               u'AND jobIDyear = %s ' \
+               u'AND jobIDnum = %s ' \
+               u'AND finishTime IS NULL;'
+
+        data2 = (userID, self.job_number_sql[0], self.job_number_sql[1])
+
+        c, conn = connection()
+
+        c.execute(sql2, data2)
+        value = c.fetchone()
+        if value is not None:
+            time_ID = value[0]
+            start = value[1]
+
+            total_time = int(finish_time.strftime('%s')) - int(start.strftime('%s'))
+
+            data = (finish_time, total_time, time_ID)
+            c.execute(sql, data)
+
+        conn_close(c, conn)
+
+        return finish_time
+
+    def get_times(self, user_ID=None, start_date=None, finish_date=None):
+        """
+        Used to get the times of the job.
+        It will get the total time and at a later date be able to do user and date refines.
+        This function should find the values for the entry's that have been started but not yet finished.
+        These non finished entry's should be added to the total time
+        :param start_date:
+        :param finish_date:
+        :param user_ID:
+        """
+        if user_ID is not None:
+            pass
+        else:
+            sql = u'SELECT SUM(totalTime) ' \
+                  u'FROM job_time_log_TBL ' \
+                  u'WHERE jobIDyear = %s ' \
+                  u'and jobIDnum = %s;'
+
+            data = (self.job_number_sql[0], self.job_number_sql[1])
+
+        c, conn = connection()
+
+        c.execute(sql, data)
+        time = c.fetchone()
+
+        if time is not None:
+            output = time[0]
+
+        else:
+            output = 0
+
+        conn_close(c, conn)
+
+        return output

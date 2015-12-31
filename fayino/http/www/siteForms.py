@@ -1,5 +1,5 @@
-from wtforms import Form, StringField, validators, SelectField, BooleanField, PasswordField, TextAreaField,\
-    DecimalField, DateTimeField
+from wtforms import Form, StringField, validators, SelectField, BooleanField, PasswordField, TextAreaField, \
+    DecimalField, HiddenField
 
 
 #: Here you will find forms that can be used to take information form a user
@@ -86,7 +86,6 @@ class LoginConfirm(Form):
 
 
 class JobCreate(Form):
-
     """
     Form for making the basic job and the details that follows
     """
@@ -102,3 +101,12 @@ class JobCreate(Form):
 
     # TODO checks need to be put in place to make sure the format is right
     pTime = StringField(label='Time')
+
+
+class JobMain(Form):
+    """
+    Form used to pass values such as the timer start function. More hopefully will be added to this.
+    Or not this class should be looked at to see if it can be worked around.
+    """
+
+    job_number_sql = HiddenField()
