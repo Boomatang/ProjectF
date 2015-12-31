@@ -7,7 +7,7 @@ from pymysql import escape_string as thwart
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
-from site_actions import login_action, check_session, User
+from site_actions import login_action, check_session, User, Job
 
 
 # ####################      Set up        ########################
@@ -68,7 +68,58 @@ def private_home():
 
 # ####################      Job Related Pages        ########################
 
-@app.route('/createNewJob', methods=['POST', 'GET'])
+@app.route('/jobs/<job_number>',  methods=['POST', 'GET'])
+@login_required
+def job_main_details(job_number):
+
+    """
+    Bring the overview of all the details to show
+    :param job_number:
+    :return:
+    """
+
+    year, number = job_number.split('-')
+
+    job_number_sql = (int(year), int(number))
+
+    job = Job(job_number_sql)
+
+    return render_template('private/jobs/main_details.html', job=job)
+
+
+@app.route('/jobs/',  methods=['POST', 'GET'])
+@login_required
+def jobs_list():
+    """
+    Gives a list of all the jobs.
+    Fillers will be added at a later date but for now this is all it does.
+    """
+    job_list = []
+    number_list = sql_functions.get_all_job_numbers()
+
+    for number in number_list:
+        job_list.append(Job(number))
+
+    return render_template('private/jobs/list.html', job_list=job_list)
+
+
+@app.route('/newjoboverview/',  methods=['POST', 'GET'])
+@login_required
+def new_job_overview():
+
+    """
+    Page gives a overview of the job that had been created in the page before hand
+    :return:
+    """
+    job_number = session['temp_job_number']
+
+    job = Job(job_number)
+    session.pop('temp_job_number', None)
+
+    return render_template('private/jobs/jobOverView.html', job=job)
+
+
+@app.route('/createNewJob/', methods=['POST', 'GET'])
 @login_required
 def CreateJobPage():
 
@@ -86,9 +137,9 @@ def CreateJobPage():
         values = [title, description, cost, length]
 
         job_number = sql_functions.create_job(values)
+        session['temp_job_number'] = job_number
 
-        flash(values)
-        flash(job_number)
+        return redirect('/newjoboverview/')
 
     return render_template('private/jobs/create.html', form=form)
 

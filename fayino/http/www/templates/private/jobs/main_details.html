@@ -1,0 +1,9 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+
+<h1>Job Title: {{ job.title }}</h1>
+<h1>This page is for {{ job.job_number }}</h1>
+
+
+{% endblock %}

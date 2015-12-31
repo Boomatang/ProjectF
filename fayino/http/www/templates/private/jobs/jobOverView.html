@@ -2,5 +2,10 @@
 {% from "macros/formMacros.html" import form_field with context %}
 {% block content %}
 <h1>Overview of the job just created.</h1>
+<h1>Title: {{ job.title }}</h1>
+<h2>System job number: {{ job.job_number }}</h2>
+<p>{{ job.description }}</p>
+<p>The cost of the job has been quoted at &euro;{{ job.pCost }}</p>
+<p>Time that has been add to this job is {{ job.quoted_time() }}</p>
 
 {% endblock %}

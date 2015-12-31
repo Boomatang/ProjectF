@@ -323,3 +323,30 @@ def get_job_details(job_number):
     conn_close(c, conn)
 
     return output
+
+
+def get_all_job_numbers():
+
+    """
+    This function will return a list of all the job numbers that is currently in be database
+    """
+    # TODO this function should only get the results for the company that is logged in
+    sql = u'SELECT jobIDyear, jobIDnum ' \
+          u'FROM job_TBL'
+
+    data = ()
+
+    c, conn = connection()
+
+    c.execute(sql, data)
+
+    values = c.fetchall()
+
+    if len(values) > 1:
+        output = values
+    else:
+        output = 'List size error'
+
+    conn_close(c, conn)
+
+    return output

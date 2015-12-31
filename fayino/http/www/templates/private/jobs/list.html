@@ -1,0 +1,14 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+<h1>Listing of jobs in the book</h1>
+
+<table>
+    <!--TODO remove the styling from the fields and place in a css file -->
+<tr><th>Job Number</th><th style="padding: 10px;">Title</th></tr>
+{% for job in job_list %}
+<tr><td>{{ job.job_number }}</td><td style="padding: 10px;">{{ job.title }}</td>
+    <td><a href="{{ url_for('job_main_details', job_number=job.job_number)}}">View job</a> </td></tr>
+{% endfor %}
+</table>
+{% endblock %}
