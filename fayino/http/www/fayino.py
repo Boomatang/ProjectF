@@ -279,7 +279,22 @@ def signUpComplated():
 
 
 @app.route("/confirmUserDetails/")
-def confirmUserSetupDetails():
+def confirm_user_setup_details():
+
+    # Setup company schema for user
+    # Add the user to the company schema
+
+    if sql_functions.verify_user_company_schema(session['login_details']):
+        # create the required tables for the schema
+        # Setup company schema for user
+        company_schema = session['login_details']['company_schema']
+        sql_functions.create_company_schema(company_schema)
+        sql_functions.create_company_schema_tables(company_schema)
+
+        # Add the user to the company schema
+        sql_functions.add_user_to_company_member_tbl(session['login_details'], session['temp_user_details'][1])
+
+
 
     user = sql_functions.get_uesr_details(session['userID'])
     company = sql_functions.get_company_details(session['companyID'])
@@ -287,35 +302,35 @@ def confirmUserSetupDetails():
     user_data = {'userName': user[3],
                  'email': user[9],
                  'password': '******',
-                 'companyName': company[1],
-                 'companyShort': company[2]}
+                 'companyName': company[1]}
 
     return render_template("SetUp/confirmDetails.html",
                            user_data=user_data)
 
 
 @app.route('/companyDetails/', methods=['POST', 'GET'])
-def setCompanyDetails():
+def set_company_details():
+    """
+    Sets up the new company for the user that has just made an account
+    :return:
+    """
+    # TODO If the user makes account but try not set a company up they should be forced to do so.
     form = Set_up_company(request.form)
 
     if request.method == 'POST' and form.validate():
-        companyID = sql_functions.next_companyID()
-        company = (thwart(form.company_name.data),
-                   thwart(form.company_code.data),
-                   thwart(form.company_type.data),
-                   session['userID'],
-                   companyID)
+        company = thwart(form.company_name.data)
 
-        if sql_functions.company_code_check(company[1]):
+        company_ID, company_schema = sql_functions.enter_company_detail(company)
 
-            sql_functions.enter_company_detail(company)
-            sql_functions.link_user_company(company[3], company[4])
-            session['companyID'] = company[4]
-            return redirect('/confirmUserDetails/')
+        sql_functions.link_user_company(session['temp_user_details'][0], company_ID)
 
-        else:
-            flash("That company short code has been taken..",
-                  category='error')
+        login_details = {'user_ID': session['temp_user_details'][0],
+                         'company_ID': company_ID,
+                         'company_schema': company_schema}
+
+        session['login_details'] = login_details
+
+        return redirect(url_for('confirm_user_setup_details'))
 
     return render_template("SetUp/setCompanyDetails.html", form=form)
 
@@ -323,28 +338,25 @@ def setCompanyDetails():
 @app.route('/signup/', methods=['GET', 'POST'])
 def signup():
     # fixme there is no way to roll back to this page if the company works wrong. Need a role back function on the database
+    """
+    This uses the new database layout and will sign a new user up with an account
+    :return:
+    """
     form = Signup(request.form)
 
     if request.method == 'POST' and form.validate():
-        signUpForm = (thwart(form.user_name.data),
+        sign_up_form = (thwart(form.user_name.data),
                       thwart(form.userEmail.data),
                       crypt.encrypt(thwart(form.password.data)),
                       thwart(str(form.accept_terms.data)))
 
-        if sql_functions.check_new_username_and_email(signUpForm[0], signUpForm[1]):
-            userID = sql_functions.sign_up_user(signUpForm)
+        userID = sql_functions.sign_up_user(sign_up_form)
+        session.clear()
+        session['temp_user_details'] = (userID, sign_up_form[0])
 
-            session['user'] = crypt.encrypt(signUpForm[1])
-            session['userID'] = userID
+        flash('You are now signed up')
+        return redirect(url_for('set_company_details'))
 
-            flash('You are now signed up')
-            return redirect('/companyDetails/')
-
-        else:
-            flash("The Email or user name you have entered has been used before", category='error')
-
-        flash(signUpForm[3])
-        return redirect('/')
     return render_template("SetUp/signup.html", form=form)
 
 

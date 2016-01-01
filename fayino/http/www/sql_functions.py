@@ -1,18 +1,23 @@
 import datetime
 import gc
+import string
+from random import randint, choice
 
 import pymysql
 
+master = 'login_master_files'
 
-def connection():
+
+def connection(schema="fayino"):
     """
     Use to make a connection to the SQL database
 
+    :param schema: The schema in which the user connects
     :return:
     """
     conn = pymysql.connect(host="localhost",
                            user="root",
-                           db="fayino")
+                           db=schema)
     c = conn.cursor()
     return c, conn
 
@@ -31,7 +36,149 @@ def conn_close(c, conn):
     gc.collect()
 
 
+def add_user_to_company_member_tbl(login_details, username='username'):
+
+    get_user_sql = u'SELECT person_ID, join_date, accept_terms ' \
+                   u'FROM person_TBL ' \
+                   u'WHERE person_ID = %s'
+
+    insert_user_sql = u'INSERT INTO member_TBL (' \
+                      u'login_master_ID, join_date, accept_terms, username) ' \
+                      u'VALUES (%s, %s, %s, %s)'
+
+    if verify_user_company_schema(login_details):
+        get_user_data = (login_details['user_ID'],)
+
+        mc, mconn = connection(master)
+        try:
+            mc.execute(get_user_sql, get_user_data)
+
+            data = mc.fetchone()
+        finally:
+            conn_close(mc, mconn)
+
+        if data is not None:
+            insert_user_data = (data[0], data[1], data[2], username)
+            c, conn = connection(login_details['company_schema'])
+            try:
+                c.execute(insert_user_sql, insert_user_data)
+            finally:
+                conn_close(c, conn)
+
+
+def create_company_schema_tables(schema_name=None):
+    """
+    This function will make the basic schema set up.
+    It should make all the tables that is required at the time of a user signing up
+    :param schema_name: schema that has been assigned to the company a user has set up
+    """
+    top = [u'SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;',
+           u'SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;',
+           u"SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';"]
+
+    bottom = [u'SET SQL_MODE=@OLD_SQL_MODE;',
+              u'SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;',
+              u'SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;']
+
+    member_tbl = u'CREATE TABLE IF NOT EXISTS `member_TBL` ( ' \
+                 u'`person_ID` INT(11) NOT NULL, ' \
+                 u'`first_name` VARCHAR(45) NULL DEFAULT NULL, ' \
+                 u'`last_name` VARCHAR(45) NULL DEFAULT NULL, ' \
+                 u'`username` VARCHAR(100) NULL DEFAULT NULL, ' \
+                 u'`DOB` DATE NULL DEFAULT NULL, ' \
+                 u'`joinDate` DATE NULL DEFAULT NULL, ' \
+                 u'`accept_terms` DATE NOT NULL, ' \
+                 u'`login_master_ID` INT(11) NOT NULL, ' \
+                 u'PRIMARY KEY (`person_ID`), ' \
+                 u'UNIQUE INDEX `person_ID_UNIQUE` (`person_ID` ASC), ' \
+                 u'UNIQUE INDEX `user_name_UNIQUE` (`username` ASC)) ' \
+                 u'ENGINE = InnoDB ' \
+                 u'DEFAULT CHARACTER SET = utf8;'
+
+    c, conn = connection(schema_name)
+
+    try:
+
+        for line in top:
+            c.execute(line)
+            conn.commit()
+
+        c.execute(member_tbl)
+        conn.commit()
+
+        for line in bottom:
+            c.execute(line)
+            conn.commit()
+
+    finally:
+        conn_close(c, conn)
+
+
+def verify_user_company_schema(login_details):
+    """
+    This function will check that the user Id and company ID all match up to the schema in question.
+    :return: output should be True or False, Default is False
+    :param login_details: a dict of values used to verify details
+    """
+    output = False
+
+    user_sql = u'SELECT company_ID ' \
+               u'FROM person_TBL ' \
+               u'WHERE person_ID = %s;'
+
+    company_sql = u'SELECT company_schema ' \
+                  u'FROM company_TBL ' \
+                  u'WHERE company_ID = %s'
+
+    user_data = (login_details['user_ID'],)
+
+    c, conn = connection(master)
+    try:
+        c.execute(user_sql, user_data)
+
+        user = c.fetchone()
+
+        if user is not None:
+            company_ID = user[0]
+
+            if company_ID == login_details['company_ID']:
+                company_data = (company_ID,)
+                c.execute(company_sql, company_data)
+                company = c.fetchone()
+
+                if company is not None:
+                    company_schema = company[0]
+
+                    if company_schema == login_details['company_schema']:
+                        output = True
+    finally:
+        conn_close(c, conn)
+
+    return output
+
+
+def create_company_schema(company_schema=None):
+    """
+    Create a new schema in the database that user can now use.
+    All company details will be set up in this schema.
+    :param company_schema: String set in the master database
+    """
+    sql = 'CREATE SCHEMA IF NOT EXISTS ' + company_schema + ';'
+
+    c, conn = connection(master)
+    try:
+        c.execute(sql)
+    finally:
+        conn_close(c, conn)
+
+
 def check_new_username_and_email(username, email):
+    """
+
+    :param username:
+    :param email:
+    :return:
+    """
     c, conn = connection()
 
     sql = """SELECT userName, loginEmail
@@ -53,32 +200,48 @@ def check_new_username_and_email(username, email):
 
 
 def sign_up_user(user):
-    c, conn = connection()
+    """
+    Enters a new user in to the main data base table.
+    :param user: This is a tuple of values that comes form a sign up form.
+    :return: The ID used as a primary Key in the tables
+    """
+    # FIXME there is nothing stopping a user from entering the same password and email
+    c, conn = connection(master)
 
     sql = u'INSERT INTO person_TBL' \
-          u'(personID, userName, loginEmail, password, acceptTErms, joinDate)' \
-          u'VALUES (%s, %s, %s, %s, %s, %s)'
+          u'(login_email, password, accept_terms, join_date)' \
+          u'VALUES (%s, %s, %s, %s)'
 
-    acceptDate = datetime.date.today()
-    acceptDate = str(acceptDate.year) + "-" + str(acceptDate.month) + "-" + str(acceptDate.day)
+    accept_date = datetime.date.today()
+    accept_date = str(accept_date.year) + "-" + str(accept_date.month) + "-" + str(accept_date.day)
 
-    joinDate = datetime.date.today()
-    joinDate = str(joinDate.year) + "-" + str(joinDate.month) + "-" + str(joinDate.day)
+    join_date = datetime.date.today()
+    join_date = str(join_date.year) + "-" + str(join_date.month) + "-" + str(join_date.day)
 
-    sql2 = u'SELECT MAX(personID)' \
-           u'FROM person_TBL'
-
-    a = c.execute(sql2)
-
-    personID = c.fetchone()
-    personID = personID[0] + 1
-
-    data = (personID, user[0], user[1], user[2], acceptDate, joinDate)
+    data = (user[1], user[2], accept_date, join_date)
 
     c.execute(sql, data)
+    conn.commit()
+
+    person_ID_sql = u'SELECT person_ID ' \
+                    u'FROM person_TBL ' \
+                    u'WHERE login_email = %s ' \
+                    u'AND password = %s'
+
+    person_ID_data = (user[1], user[2])
+
+    c.execute(person_ID_sql, person_ID_data)
+    values = c.fetchone()
+
+    if values is not None:
+        person_ID = values[0]
+
+    else:
+        person_ID = 'Error'
+
     conn_close(c, conn)
 
-    return personID
+    return person_ID
 
 
 def company_code_check(code):
@@ -135,15 +298,40 @@ def enter_company_detail(company):
     :param company: List of values from a form that has been filled in
     :return:
     """
-    c, conn = connection()
-    sql = u'INSERT INTO company_TBL ' \
-          u'(companyID, companyName, companyCode, companyType, companyOwer, companyAdmin)' \
-          u'VALUES (%s, %s, %s, %s, %s, %s)'
 
-    data = (company[4], company[0], company[1], company[2], company[3], company[3])
+    all_char = string.ascii_letters + string.digits
+    company_schema = "zb_" + "".join(choice(all_char) for x in range(randint(7, 17)))
+
+    set_up_date = datetime.date.today()
+    set_up_date = str(set_up_date.year) + "-" + str(set_up_date.month) + "-" + str(set_up_date.day)
+
+    c, conn = connection(master)
+    sql = u'INSERT INTO company_TBL ' \
+          u'(company_name, set_up_date, company_schema) ' \
+          u'VALUES (%s, %s, %s)'
+
+    data = (company, set_up_date, company_schema)
 
     c.execute(sql, data)
+    conn.commit()
+
+    company_ID_sql = u'SELECT company_ID ' \
+                     u'FROM company_TBL ' \
+                     u'WHERE company_schema = %s'
+
+    company_ID_data = (company_schema,)
+
+    c.execute(company_ID_sql, company_ID_data)
+
+    value = c.fetchone()
+    if value is not None:
+        company_ID = value[0]
+    else:
+        company_ID = 'Error'
+
     conn_close(c, conn)
+
+    return company_ID, company_schema
 
 
 def link_user_company(userID, companyID):
@@ -154,11 +342,12 @@ def link_user_company(userID, companyID):
     :return:
     """
 
-    c, conn = connection()
-    sql = u'INSERT INTO employee_TBL (personID, companyID)' \
-          u'VALUES (%s, %s)'
+    c, conn = connection(master)
+    sql = u'UPDATE person_TBL ' \
+          u'SET company_ID = %s ' \
+          u'WHERE person_ID = %s'
 
-    data = (userID, companyID)
+    data = (companyID, userID)
 
     c.execute(sql, data)
     conn_close(c, conn)
