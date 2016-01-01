@@ -5,6 +5,17 @@
 
 <h1>Add User Review</h1>
 <p>Here we will add new user to the system. They will go under the same company name and will be set a random password. This password at a later date would be emailed to the user.</p>
+<hr>
+<h2>The following user has been added</h2>
+<p>
+    First Name: {{new_user.f_name}}<br>
+    Last Name: {{new_user.l_name}}<br>
+    User Name: {{new_user.username}}<br>
+    Email: {{new_user.email}}<br>
+</p>
 
+<a href="{{ url_for('not_built') }}"><input class="btn btn-success" type="button" value="Edit" NAME="button"></a>
+<a href="{{ url_for('private_home') }}"><input class="btn btn-success" type="button" value="Confirm" NAME="button"></a>
+<a href="{{ url_for('not_built') }}"><input class="btn btn-danger" type="button" value="Delete" NAME="button"></a>
 
 {% endblock %}

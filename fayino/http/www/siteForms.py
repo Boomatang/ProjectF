@@ -111,11 +111,11 @@ class CreateNewUser(Form):
                              validators=[validators.input_required(),
                                          validators.length(min=3, max=100),
                                          validators.Regexp(r'^[a-zA-Z0-9_]+$',
-                                                          message=(u"First name should be one word, letters,"))])
+                                                           message=(u"First name should be one word, letters,"))])
     last_name = StringField(u'Last Name',
-                             validators=[validators.input_required(),
-                                         validators.length(min=3, max=100),
-                                         validators.Regexp(r'^[a-zA-Z0-9_]+$',
+                            validators=[validators.input_required(),
+                                        validators.length(min=3, max=100),
+                                        validators.Regexp(r'^[a-zA-Z0-9_]+$',
                                                           message=(u"Last name should be one word, letters,"))])
 
     user_name = StringField(u'User Name',

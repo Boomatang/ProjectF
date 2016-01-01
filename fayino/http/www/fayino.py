@@ -69,10 +69,13 @@ def private_home():
 
 # ####################      User Related Pages        ########################
 
-@app.route('/user/review/', methods=['POST', 'GET'])
+@app.route('/user/review/<added_user>', methods=['POST', 'GET'])
 @login_required
-def user_review():
-    return render_template('private/user/review.html')
+def user_review(added_user):
+
+    new_user = User(added_user)
+
+    return render_template('private/users/review.html', new_user=new_user)
 
 
 @app.route('/users/create', methods=['POST', 'GET'])
@@ -88,8 +91,6 @@ def user_create():
         first_name = thwart(form.first_name.data)
         last_name = thwart(form.last_name.data)
         email = thwart(form.userEmail.data)
-        acceptDate = datetime.date.today()
-        acceptDate = str(acceptDate.year) + "-" + str(acceptDate.month) + "-" + str(acceptDate.day)
 
         information = (new_user_name,
                        email,
@@ -98,8 +99,8 @@ def user_create():
                        crypt.encrypt(password))
 
         if sql_functions.check_new_username_and_email(new_user_name, email):
-            sql_functions.add_user(information)
-            return redirect('/user/review/')
+            added_user = sql_functions.add_user(information)
+            return redirect(url_for('user_review', added_user=added_user))
         else:
             flash('User name and or email has been used before')
 
@@ -357,6 +358,10 @@ def publicHomePage():
 
 # ####################      Error Pages        ########################
 # TODO set up some basic error handing pages
+
+@app.route('/not_built/')
+def not_built():
+    return render_template('error/not_built.html')
 
 @app.errorhandler(404)
 def fail404(e):

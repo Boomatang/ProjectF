@@ -293,7 +293,6 @@ def next_job_number(current_year):
 
 
 def get_job_details(job_number):
-
     """
     Used to bring all the information about the job number from the database
     :param job_number: requires a tuple of 2 integers that are existing job number keys
@@ -326,7 +325,6 @@ def get_job_details(job_number):
 
 
 def get_all_job_numbers():
-
     """
     This function will return a list of all the job numbers that is currently in be database
     """
@@ -396,11 +394,24 @@ def add_user(data_set):
     personID = c.fetchone()
     personID = personID[0] + 1
 
-    sql = u'INSERT INTO person_TBL ' \
-          u'(personID, userName, loginEmail, fName, lName, password, ' \
-          u'acceptTErms, joinDate) ' \
-          u'VALUES (%s, %s, %s, %s, %s, %s, %s)'
+    insert_sql = u'INSERT INTO person_TBL ' \
+                 u'(personID, userName, loginEmail, password, ' \
+                 u'acceptTErms, joinDate) ' \
+                 u'VALUES (%s, %s, %s, %s, %s, %s)'
 
-    data = (str(personID), str(data_set[0]), str(data_set[1]), str(data_set[2]), str(data_set[3]), str(data_set[4]), str(joinDate), str(joinDate))
-    c.execute(sql, data)
+    insert_data = (personID, data_set[0], data_set[1], data_set[4], joinDate, joinDate)
+    c.execute(insert_sql, insert_data)
+    conn.commit()
+
+    update_sql = u'UPDATE person_TBL ' \
+                 u'SET fName = %s,' \
+                 u'lName = %s ' \
+                 u'WHERE personId = %s;'
+
+    update_data = (data_set[2], data_set[3], personID)
+
+    c.execute(update_sql, update_data)
+
     conn_close(c, conn)
+
+    return personID
