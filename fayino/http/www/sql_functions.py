@@ -101,13 +101,17 @@ def add_user_to_company_member_tbl(login_details, username='username'):
     """
     output = None
 
-    get_user_sql = u'SELECT person_ID, join_date, accept_terms ' \
+    get_user_sql = u'SELECT person_ID, join_date, accept_terms, login_email ' \
                    u'FROM person_TBL ' \
                    u'WHERE person_ID = %s'
 
     insert_user_sql = u'INSERT INTO member_TBL (' \
                       u'login_master_ID, join_date, accept_terms, username) ' \
                       u'VALUES (%s, %s, %s, %s)'
+
+    add_email = u'INSERT INTO email_TBL ' \
+                u'(`email_address`, `main`, `person_ID`) ' \
+                u'VALUES (%s, 1, %s)'
 
     get_user_ID_sql = u'SELECT person_ID ' \
                       u'FROM member_TBL ' \
@@ -138,6 +142,9 @@ def add_user_to_company_member_tbl(login_details, username='username'):
 
                 if value is not None:
                     output = value[0]
+
+                email_data = (data[3], output)
+                c.execute(add_email, email_data)
 
             finally:
                 conn_close(c, conn)
@@ -205,26 +212,40 @@ def create_company_schema_tables(schema_name=None):
                        u'REFERENCES `member_TBL` (`person_ID`)) ' \
                        u'ENGINE = InnoDB ' \
                        u'DEFAULT CHARACTER SET = utf8; '
+
+    email_tbl = u'CREATE TABLE IF NOT EXISTS `email_TBL` (' \
+                u'`email_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
+                u'`email_address` VARCHAR(150) NOT NULL, ' \
+                u'`email_type` VARCHAR(45) NULL DEFAULT NULL, ' \
+                u'`main` TINYINT(1) NULL DEFAULT NULL, ' \
+                u'`person_ID` INT(11) NULL DEFAULT NULL, ' \
+                u'`client_company_ID` INT(11) NULL DEFAULT NULL, ' \
+                u'PRIMARY KEY (`email_ID`), ' \
+                u'UNIQUE INDEX `email_ID_UNIQUE` (`email_ID` ASC), ' \
+                u'CONSTRAINT `per_email_FK` ' \
+                u'FOREIGN KEY (`person_ID`) ' \
+                u'REFERENCES `member_TBL` (`person_ID`)) ' \
+                u'ENGINE = InnoDB ' \
+                u'DEFAULT CHARACTER SET = utf8;'
+
+    tables = [member_tbl, email_tbl, job_tbl, job_time_log_tbl]
+
     c, conn = connection(schema_name)
+
+    def add_table(table_name):
+        c.execute(table_name)
+        conn.commit()
 
     try:
 
         for line in top:
-            c.execute(line)
-            conn.commit()
+            add_table(line)
 
-        c.execute(member_tbl)
-        conn.commit()
-
-        c.execute(job_tbl)
-        conn.commit()
-
-        c.execute(job_time_log_tbl)
-        conn.commit()
+        for line in tables:
+            add_table(line)
 
         for line in bottom:
-            c.execute(line)
-            conn.commit()
+            add_table(line)
 
     finally:
         conn_close(c, conn)
@@ -753,7 +774,7 @@ def get_local_master_ID(user_ID, login_details):
 
         try:
             c.execute(find_id, data)
-            value = c. fetchone()
+            value = c.fetchone()
 
             if value is not None:
                 master_id = value[0]
@@ -789,6 +810,10 @@ def add_user(data_set, login_details):
                     u'FROM member_TBL ' \
                     u'WHERE login_master_ID = %s'
 
+    add_email = u'INSERT INTO email_TBL ' \
+                u'(`email_address`, `main`, `person_ID`) ' \
+                u'VALUES (%s, 1, %s)'
+
     joinDate = datetime.date.today()
     joinDate = str(joinDate.year) + "-" + str(joinDate.month) + "-" + str(joinDate.day)
 
@@ -822,6 +847,9 @@ def add_user(data_set, login_details):
 
                 if value is not None:
                     person_ID = value[0]
+
+                add_email_data = (data_set[1], person_ID)
+                c.execute(add_email, add_email_data)
 
         finally:
             conn_close(mc, mconn)

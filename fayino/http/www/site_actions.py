@@ -1,19 +1,15 @@
 import datetime
-
 from flask import request, session, flash
 import siteForms
 import sql_functions
-from sql_functions import conn_close, connection
+from sql_functions import conn_close, connection, verify_user_company_schema
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
-
-
 import string
 from random import *
 
 
 def password_gen(min_char=8, max_char=14):
-
     all_char = string.ascii_letters + string.punctuation + string.digits
     password = "".join(choice(all_char) for x in range(randint(min_char, max_char)))
 
@@ -55,10 +51,10 @@ class User(object):
     """
 
     def __init__(self, login_details, user_ID=None):
+        self.login_details = login_details
         if user_ID is None:
-            self.data = sql_functions.get_user_details(login_details)
+            self.data = sql_functions.get_user_details(self.login_details)
         else:
-            self.login_details = login_details
             self.login_details['person_ID'] = user_ID
             self.login_details['user_ID'] = sql_functions.get_local_master_ID(user_ID, login_details)
 
@@ -69,6 +65,30 @@ class User(object):
         self.last_name = self.data[2]
         self.username = self.data[3]
 
+    def default_email(self):
+        """
+        Function gets the default email address for the user
+        :return: an email address
+        """
+        email = 'error@error.error'
+        sql = u'SELECT email_address ' \
+              u'FROM email_TBL ' \
+              u'WHERE person_ID = %s ' \
+              u'AND main = 1'
+        data = (self.login_details['person_ID'])
+
+        if verify_user_company_schema(self.login_details):
+            c, conn = connection(self.login_details['company_schema'])
+
+            try:
+                c.execute(sql, data)
+                value = c.fetchone()
+
+                if value is not None:
+                    email = value[0]
+            finally:
+                conn_close(c, conn)
+        return email
 
     @property
     def is_authenticated(self):
@@ -106,7 +126,6 @@ class Job(object):
         self.job_number_sql = job_number
         self.company_schema = login_details['company_schema']
         self.total_time = self.get_times()
-
 
     @staticmethod
     def _format_job_number(job):

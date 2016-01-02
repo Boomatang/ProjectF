@@ -18,7 +18,7 @@ ADD CONSTRAINT `job_time_FK`
 ALTER TABLE `company_schema_example`.`job_time_log_TBL`
 ADD CONSTRAINT `per_job_FK`
     FOREIGN KEY (`person_ID`)
-    REFERENCES `company_schema_example`.`person_TBL` (`person_ID`);
+    REFERENCES `company_schema_example`.`member_TBL` (`person_ID`);
     
 ALTER TABLE `company_schema_example`.`job_time_log_TBL`
 DROP FOREIGN KEY `job_time_FK`;
