@@ -1,0 +1,14 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+<h1>Listing of members in the company</h1>
+
+<table>
+    <!--TODO remove the styling from the fields and place in a css file -->
+<tr><th>Username's</th><th style="padding: 10px;">Default Email address</th></tr>
+{% for user in user_list %}
+<tr><td>{{ user.username }}</td><td style="padding: 10px;">{{ user.default_email }}</td>
+    <td><a href="{{ url_for('user_details', person_ID=user.id)}}">View Member</a> </td></tr>
+{% endfor %}
+</table>
+{% endblock %}

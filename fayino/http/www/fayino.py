@@ -62,14 +62,96 @@ def testing():
 
 # ####################      Private Related Pages        ########################
 
-@app.route('/home/')
+@app.route('/home/', methods=['POST', 'GET'])
 @login_required
 def private_home():
-    flash(session['login_details']['person_ID'])
-    return render_template('private/index.html')
+    user = User(session['login_details'], session['login_details']['person_ID'])
+    assigned_jobs = []
+    if user.assigned_jobs is not None:
+
+        for job_number in user.assigned_jobs:
+            job = Job(job_number, session['login_details'], user.id)
+            assigned_jobs.append(job)
+
+    form = Form(request.form)
+    if request.method == 'POST' and assigned_jobs is not None:
+        if sql_functions.verify_user_company_schema(session['login_details']):
+
+            for jobs in assigned_jobs:
+                if jobs.job_number in request.form:
+
+                    if request.form[jobs.job_number] == 'Start':
+                        start_time = jobs.start_time_entry(user.id)
+                        flash(start_time.strftime('%Y/%m/%d %H:%M'))
+
+                    elif request.form[jobs.job_number] == 'Stop':
+                        finish_time = jobs.user_stop_log(user.id)
+                        flash(finish_time.strftime('%Y/%m/%d %H:%M'))
+
+
+    return render_template('private/index.html',
+                           user=user,
+                           assigned_jobs=assigned_jobs,
+                           form=form)
 
 
 # ####################      User Related Pages        ########################
+
+@app.route('/user/<person_ID>', methods=['POST', 'GET'])
+@login_required
+def user_details(person_ID):
+    """
+    Bring the overview of all the details to show
+    :param job_number:
+    :return:
+    """
+    user = User(session['login_details'], person_ID)
+    assigned_jobs = []
+    if user.assigned_jobs is not None:
+
+        for job_number in user.assigned_jobs:
+            job = Job(job_number, session['login_details'], user.id)
+            assigned_jobs.append(job)
+
+    form = Form(request.form)
+    if request.method == 'POST' and assigned_jobs is not None:
+        if sql_functions.verify_user_company_schema(session['login_details']):
+
+            for jobs in assigned_jobs:
+                if jobs.job_number in request.form:
+
+                    if request.form[jobs.job_number] == 'Start':
+                        start_time = jobs.start_time_entry(user.id)
+                        flash(start_time.strftime('%Y/%m/%d %H:%M'))
+
+                    elif request.form[jobs.job_number] == 'Stop':
+                        finish_time = jobs.user_stop_log(user.id)
+                        flash(finish_time.strftime('%Y/%m/%d %H:%M'))
+
+
+    return render_template('private/users/main_details.html',
+                           user=user,
+                           assigned_jobs=assigned_jobs,
+                           form=form)
+
+
+@app.route('/user/list/', methods=['POST', 'GET'])
+@login_required
+def all_user_list():
+
+    # FIXME This page brakes if there is no jobs in the database
+    """
+    This page will show the list of the user in the company
+    :return:
+    """
+    user_list = []
+    number_list = sql_functions.get_all_user_ids(session['login_details'])
+
+    for number in number_list:
+        user_list.append(User(session['login_details'], number))
+
+    return render_template('private/users/list.html', user_list=user_list)
+
 
 @app.route('/user/review/<added_user>', methods=['POST', 'GET'])
 @login_required
@@ -82,6 +164,10 @@ def user_review(added_user):
 @app.route('/users/create', methods=['POST', 'GET'])
 @login_required
 def user_create():
+    """
+    The function lets a logged in user add more members to the company
+    :return:
+    """
     form = siteForms.CreateNewUser(request.form)
     user_name = sql_functions.get_sudo_username(session['login_details'])
     password = password_gen()
@@ -120,13 +206,35 @@ def job_main_details(job_number):
     :param job_number:
     :return:
     """
-
+    # TODO a lot of this code maybe able to be put in the Job Class
+    # Job details
     year, number = job_number.split('-')
 
     job_number_sql = (int(year), int(number))
 
     job = Job(job_number_sql, session['login_details'])
 
+
+    # assigned users
+    member_list = []
+    id_list = sql_functions.job_assigned_users(session['login_details'], job_number_sql)
+    if id_list is not None:
+        for id_value in id_list:
+            member_list.append(User(session['login_details'], id_value))
+    else:
+        member_list = None
+
+    # User list
+    user_list = []
+    number_list = sql_functions.get_all_user_ids(session['login_details'])
+
+    for number in number_list:
+        if number in id_list:
+            pass
+        else:
+            user_list.append(User(session['login_details'], number))
+
+    # page form details
     form = Form(request.form)
     if request.method == 'POST':
         if sql_functions.verify_user_company_schema(session['login_details']):
@@ -135,17 +243,43 @@ def job_main_details(job_number):
             if request.form['timer'] == 'Start':
                 start_time = job.start_time_entry(user)
                 flash(start_time.strftime('%Y/%m/%d %H:%M'))
-                flash(user)
 
             elif request.form['timer'] == 'Stop':
                 finish_time = job.user_stop_log(user)
                 flash(finish_time.strftime('%Y/%m/%d %H:%M'))
 
-                flash(user)
+            elif request.form['timer'] == 'Assign':
+                user_assigned = []
+
+                for value in request.form:
+                    for user in user_list:
+                        if value == 'user'+str(user.id):
+                            user_assigned.append(user.id)
+
+                for user_id in user_assigned:
+                    values = (job_number_sql[0], job_number_sql[1], user_id)
+
+                    sql_functions.assign_users_to_job(values, session['login_details'])
+
+            elif request.form['timer'] == 'Remove Members' and member_list is not None:
+                remove_member = []
+                for value in request.form:
+                    for member in member_list:
+                        if value == 'member'+str(member.id):
+                            remove_member.append(member.id)
+
+                for member_id in remove_member:
+                    values = (job_number_sql[0], job_number_sql[1], member_id)
+
+                    sql_functions.remove_users_from_job(values, session['login_details'])
 
         return redirect(url_for('job_main_details', job_number=job.job_number))
 
-    return render_template('private/jobs/main_details.html', job=job, form=form)
+    return render_template('private/jobs/main_details.html',
+                           job=job,
+                           user_list=user_list,
+                           member_list=member_list,
+                           form=form)
 
 
 @app.route('/jobs/', methods=['POST', 'GET'])

@@ -228,7 +228,26 @@ def create_company_schema_tables(schema_name=None):
                 u'ENGINE = InnoDB ' \
                 u'DEFAULT CHARACTER SET = utf8;'
 
-    tables = [member_tbl, email_tbl, job_tbl, job_time_log_tbl]
+    member_linked_jobs_tbl = u'CREATE TABLE IF NOT EXISTS `member_linked_jobs_TBL` (' \
+                             u'`job_ID_year` INT(4) NOT NULL, ' \
+                             u'`job_ID_number` INT(6) NOT NULL, ' \
+                             u'`person_ID` INT(11) NOT NULL, ' \
+                             u'`assigned_date` DATE NOT NULL, ' \
+                             u'PRIMARY KEY (`job_ID_year`, `job_ID_number`, `person_ID`), ' \
+                             u'UNIQUE INDEX `member_linked_jobs_ID_UNIQUE` ' \
+                             u'(`job_ID_year`, `job_ID_number`, `person_ID` ASC), ' \
+                             u'CONSTRAINT `per_link_jobs_FK` ' \
+                             u'FOREIGN KEY (`person_ID`) ' \
+                             u'REFERENCES `member_TBL` ' \
+                             u'(`person_ID`), ' \
+                             u'CONSTRAINT `job_link_jobs_FK` ' \
+                             u'FOREIGN KEY (`job_ID_year` , `job_ID_number`) ' \
+                             u'REFERENCES `job_TBL` ' \
+                             u'(`job_ID_year` , `job_ID_number`)) ' \
+                             u'ENGINE = InnoDB ' \
+                             u'DEFAULT CHARACTER SET = utf8; ' \
+
+    tables = [member_tbl, email_tbl, job_tbl, job_time_log_tbl, member_linked_jobs_tbl]
 
     c, conn = connection(schema_name)
 
@@ -856,3 +875,104 @@ def add_user(data_set, login_details):
             conn_close(c, conn)
 
     return person_ID
+
+
+def get_all_user_ids(login_details):
+    """
+    Will return the person_ID numbers for all the members in the company
+    :param login_details: standard input values
+    :return: list of person_ID
+    """
+    output = None
+    sql = u'SELECT person_ID ' \
+          u'FROM member_TBL'
+
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+
+        try:
+            c.execute(sql)
+            values = c.fetchall()
+
+            if values is not None:
+                output = values
+        finally:
+            conn_close(c, conn)
+
+    return output
+
+
+def assign_users_to_job(values, login_details):
+    """
+    A function that will assign user to a job on the members linked jobs table
+    :param values: set of ID values for the job and user
+    :param login_details: standard input values
+    """
+
+    sql = u'INSERT INTO member_linked_jobs_TBL ' \
+          u'(job_ID_year, job_ID_number, person_ID, assigned_date) ' \
+          u'VALUES (%s, %s, %s, NOW());'
+
+    data = values
+
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+
+        try:
+            c.execute(sql, data)
+        finally:
+            conn_close(c, conn)
+
+
+def job_assigned_users(login_details, job_id):
+    """
+    Used to show the assigned company members to a job
+    :param login_details:
+    :param job_id:
+    :return: List of person ID's or None
+    """
+    output = None
+
+    sql = u'SELECT person_ID ' \
+          u'FROM member_linked_jobs_TBL ' \
+          u'WHERE job_ID_year = %s ' \
+          u'AND job_ID_number = %s;'
+
+    data = job_id
+
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+
+        try:
+            c.execute(sql, data)
+
+            values = c.fetchall()
+
+            if values is not None:
+                output = values
+        finally:
+            conn_close(c, conn)
+
+    return output
+
+
+def remove_users_from_job(entry_id, login_details):
+    """
+    Removes the assigned user from the job in question
+    :param entry_id:
+    :param login_details:
+    """
+    sql = u'DELETE FROM member_linked_jobs_TBL ' \
+          u'WHERE job_ID_year = %s ' \
+          u'AND job_ID_number = %s ' \
+          u'AND person_ID = %s;'
+
+    data = entry_id
+
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+
+        try:
+            c.execute(sql, data)
+        finally:
+            conn_close(c, conn)

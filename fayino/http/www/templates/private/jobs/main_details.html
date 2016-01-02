@@ -20,9 +20,31 @@
 
     </table>
     {% if job.user_started_log(session['login_details']['person_ID']) %}
-    <input type="submit" name="timer" value="Stop">
+    <input type="submit" form="Job" name="timer" value="Stop">
     {% else %}
-    <input type="submit" name="timer" value="Start">
+    <input type="submit" form="Job" name="timer" value="Start">
     {% endif %}
 </form>
+
+
+<br>
+<hr>
+<h3>Assigned User</h3>
+{% if member_list %}
+{% for member in member_list %}
+<p>{{ member.username }} : <input type="checkbox" form="Job" name="member{{member.id}}" value="{{ member.id }}"></p>
+{% endfor %}
+<input class="btn btn-danger" type="submit" form="Job" name="timer" value="Remove Members">
+{% else %}
+<p>No user have been assigned yet</p>
+{% endif %}
+
+
+<br>
+<hr>
+<h3>Members that can be Assigned</h3>
+{% for user in user_list %}
+<p>{{ user.username }} : <input type="checkbox" form="Job" name="user{{user.id}}" value="{{ user.id }}"></p>
+{% endfor %}
+<input class="btn btn-success" type="submit" form="Job" name="timer" value="Assign">
 {% endblock %}

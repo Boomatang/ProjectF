@@ -60,6 +60,22 @@ CREATE TABLE IF NOT EXISTS `company_schema_example`.`job_time_log_TBL` (
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
+-- user email table
+CREATE TABLE IF NOT EXISTS `company_schema_example`.`email_TBL` (
+  `email_ID` INT(11) AUTO_INCREMENT NOT NULL,
+  `email_address` VARCHAR(150) NOT NULL,
+  `email_type` VARCHAR(45) NULL DEFAULT NULL,
+  `main` TINYINT(1) NULL DEFAULT NULL,
+  `person_ID` INT(11) NULL DEFAULT NULL,
+  `client_company_ID` INT(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`email_ID`),
+  UNIQUE INDEX `email_ID_UNIQUE` (`email_ID` ASC),
+  CONSTRAINT `per_email_FK`
+    FOREIGN KEY (`person_ID`)
+    REFERENCES `company_schema_example`.`member_TBL` (`person_ID`))
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
 
 -- At bottom of script
 SET SQL_MODE=@OLD_SQL_MODE;

@@ -65,7 +65,10 @@ class User(object):
         self.last_name = self.data[2]
         self.username = self.data[3]
 
-    def default_email(self):
+        self.default_email = self.get_default_email()
+        self.assigned_jobs = self.get_assigned_jobs()
+
+    def get_default_email(self):
         """
         Function gets the default email address for the user
         :return: an email address
@@ -89,6 +92,33 @@ class User(object):
             finally:
                 conn_close(c, conn)
         return email
+
+    def get_assigned_jobs(self):
+
+        """
+        Gets any jobs that may have been assigned to the user
+        :return: returns a list if true else None
+        """
+        output = None
+        sql = u'SELECT job_ID_year, job_ID_number ' \
+              u'FROM member_linked_jobs_TBL ' \
+              u'WHERE person_ID = %s'
+
+        data = (self.id,)
+
+        if verify_user_company_schema(self.login_details):
+            c, conn = connection(self.login_details['company_schema'])
+
+            try:
+                c.execute(sql, data)
+                values = c.fetchall()
+
+                if values is not None:
+                    output = values
+            finally:
+                conn_close(c, conn)
+
+        return output
 
     @property
     def is_authenticated(self):
@@ -115,7 +145,7 @@ class Job(object):
     More is to be added here and the time values should be called by functions the variable directly.
     """
 
-    def __init__(self, job_number, login_details):
+    def __init__(self, job_number, login_details, user_id=None):
         self.data = sql_functions.get_job_details(job_number, login_details)
         self.title = self.data[0]
         self.description = self.data[1]
@@ -126,6 +156,7 @@ class Job(object):
         self.job_number_sql = job_number
         self.company_schema = login_details['company_schema']
         self.total_time = self.get_times()
+        self.user_view_running = self.user_started_log(user_id)
 
     @staticmethod
     def _format_job_number(job):
@@ -178,7 +209,7 @@ class Job(object):
         This works on the bases that there will ever only be one entry that is has a finish time that is null for that user.
         :param userID:
         """
-
+        output = None
         sql = u'SELECT * ' \
               u'FROM job_time_log_TBL ' \
               u'WHERE person_ID = %s ' \
@@ -187,20 +218,20 @@ class Job(object):
               u'AND finish_time IS NULL'
 
         data = (userID, self.job_number_sql[0], self.job_number_sql[1])
+        if userID is not None:
+            c, conn = connection(self.company_schema)
+            try:
+                c.execute(sql, data)
 
-        c, conn = connection(self.company_schema)
-        try:
-            c.execute(sql, data)
+                value = c.fetchone()
 
-            value = c.fetchone()
+                if value is not None:
+                    output = True
 
-            if value is not None:
-                output = True
-
-            else:
-                output = False
-        finally:
-            conn_close(c, conn)
+                else:
+                    output = False
+            finally:
+                conn_close(c, conn)
         return output
 
     def user_stop_log(self, userID):
@@ -277,3 +308,6 @@ class Job(object):
             conn_close(c, conn)
 
         return output
+
+    def __repr__(self):
+        return '<Job: %r>' % (self.title)
