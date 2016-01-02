@@ -1,13 +1,12 @@
 import datetime
-import string
-from random import *
-
 from flask import request, session, flash
-from passlib.hash import sha256_crypt as crypt
-from pymysql import escape_string as thwart
-
+import siteForms
 import sql_functions
 from sql_functions import conn_close, connection, verify_user_company_schema
+from passlib.hash import sha256_crypt as crypt
+from pymysql import escape_string as thwart
+import string
+from random import *
 
 
 def password_gen(min_char=8, max_char=14):

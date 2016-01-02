@@ -246,7 +246,8 @@ def create_company_schema_tables(schema_name=None):
                              u'REFERENCES `job_TBL` ' \
                              u'(`job_ID_year` , `job_ID_number`)) ' \
                              u'ENGINE = InnoDB ' \
-                             u'DEFAULT CHARACTER SET = utf8; '
+                             u'DEFAULT CHARACTER SET = utf8; ' \
+
     tables = [member_tbl, email_tbl, job_tbl, job_time_log_tbl, member_linked_jobs_tbl]
 
     c, conn = connection(schema_name)
