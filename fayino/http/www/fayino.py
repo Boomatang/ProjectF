@@ -8,7 +8,6 @@ from flask import Flask, render_template, request, flash, redirect, session, url
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 from wtforms import Form
-from flask_login import LoginManager, login_user, login_required, current_user
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
@@ -21,19 +20,13 @@ app = Flask(__name__)
 app.secret_key = 'A0Zr98j/3yX R~XHH!jiugf098uhspuswfdsdN]LWX/,?RT'
 
 
-login_manager = LoginManager()
-login_manager.init_app(app)
 
 
 # ####################      wrappers        ########################
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.get_id(current_user)
-    #return str(session['manger'][0])
 
 # ####################      Testing Related Pages        ########################
-'''
+
 def login_required(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -44,7 +37,7 @@ def login_required(f):
             return redirect('/login/')
 
     return wrap
-'''
+
 
 @app.route("/testing/", methods=['GET', 'POST'])
 def testing():
@@ -379,12 +372,12 @@ def login():
                              'person_ID': person_ID}
             session['manger'] = (data[0], data[3])
             user = User(login_details)
-            login_user(user)
+
 
 
             session.clear()
             session['login_details'] = login_details
-            #session['logged_in'] = True
+            session['logged_in'] = True
 
             flash('Logged in successfully.')
             return redirect('/home/')
@@ -424,8 +417,8 @@ def sign_up_completed():
                              'company_schema': company_schema,
                              'person_ID': person_ID}
             session['manger'] = (data[0], data[3])
-            user = User(login_details)
-            login_user(user)
+
+
 
             session.clear()
             session['login_details'] = login_details
