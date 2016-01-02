@@ -3,3 +3,4 @@ select * from login_master_files.company_TBL;
 
 select * from member_TBL;
 select * from job_TBL;
+select * from email_TBL;

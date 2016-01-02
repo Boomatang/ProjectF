@@ -1,10 +1,14 @@
+import datetime
 from functools import wraps
 
+import gc
+
+import time
 from flask import Flask, render_template, request, flash, redirect, session, url_for
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 from wtforms import Form
-# from flask_login import LoginManager, login_user, login_required, current_user
+from flask_login import LoginManager, login_user, login_required, current_user
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
@@ -17,19 +21,19 @@ app = Flask(__name__)
 app.secret_key = 'A0Zr98j/3yX R~XHH!jiugf098uhspuswfdsdN]LWX/,?RT'
 
 
-# login_manager = LoginManager()
-# login_manager.init_app(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 
 # ####################      wrappers        ########################
 
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return User.get_id(current_user)
-
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_id(current_user)
+    #return str(session['manger'][0])
 
 # ####################      Testing Related Pages        ########################
-
+'''
 def login_required(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -40,7 +44,7 @@ def login_required(f):
             return redirect('/login/')
 
     return wrap
-
+'''
 
 @app.route("/testing/", methods=['GET', 'POST'])
 def testing():
@@ -66,6 +70,7 @@ def testing():
 @login_required
 def private_home():
     user = User(session['login_details'], session['login_details']['person_ID'])
+
     assigned_jobs = []
     if user.assigned_jobs is not None:
 
@@ -272,13 +277,14 @@ def job_main_details(job_number):
                     values = (job_number_sql[0], job_number_sql[1], member_id)
 
                     sql_functions.remove_users_from_job(values, session['login_details'])
-
         return redirect(url_for('job_main_details', job_number=job.job_number))
+    current_user = User(session['login_details'])
 
     return render_template('private/jobs/main_details.html',
                            job=job,
                            user_list=user_list,
                            member_list=member_list,
+                           current_user=current_user,
                            form=form)
 
 
@@ -356,12 +362,14 @@ def logout():
 
 @app.route("/login/", methods=['POST', 'GET'])
 def login():
+    # FIXME the page fails if the details do not matchup
     session.clear()
     form = siteForms.LoginConfirm(request.form)
     if request.method == 'POST':
         data, confirm, = login_action(form)
 
         if confirm:
+
             company_schema = sql_functions.get_company_schema(data[2])
             person_ID = sql_functions.get_company_person_ID(data[0], company_schema)
 
@@ -369,15 +377,21 @@ def login():
                              'company_ID': data[2],
                              'company_schema': company_schema,
                              'person_ID': person_ID}
+            session['manger'] = (data[0], data[3])
+            user = User(login_details)
+            login_user(user)
+
+
             session.clear()
             session['login_details'] = login_details
-            session['logged_in'] = True
+            #session['logged_in'] = True
 
             flash('Logged in successfully.')
             return redirect('/home/')
 
         else:
             flash('Login details did not match.')
+            return render_template("Login/login.html", form=form)
 
     return render_template("Login/login.html", form=form)
 
@@ -409,6 +423,10 @@ def sign_up_completed():
                              'company_ID': data[2],
                              'company_schema': company_schema,
                              'person_ID': person_ID}
+            session['manger'] = (data[0], data[3])
+            user = User(login_details)
+            login_user(user)
+
             session.clear()
             session['login_details'] = login_details
             session['logged_in'] = True
@@ -504,6 +522,8 @@ def signup():
 
 @app.route('/')
 def publicHomePage():
+
+    flash(time.time())
     return render_template("Public-html/index.html")
 
 

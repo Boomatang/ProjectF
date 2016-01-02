@@ -2,6 +2,7 @@ import datetime
 import gc
 import string
 from random import randint, choice
+import time
 
 import pymysql
 
@@ -390,16 +391,18 @@ def sign_up_user(user):
     c, conn = connection(master)
 
     sql = u'INSERT INTO person_TBL' \
-          u'(login_email, password, accept_terms, join_date)' \
-          u'VALUES (%s, %s, %s, %s)'
+          u'(login_email, password, accept_terms, join_date, password_set)' \
+          u'VALUES (%s, %s, %s, %s, %s)'
 
     accept_date = datetime.date.today()
     accept_date = str(accept_date.year) + "-" + str(accept_date.month) + "-" + str(accept_date.day)
 
     join_date = datetime.date.today()
     join_date = str(join_date.year) + "-" + str(join_date.month) + "-" + str(join_date.day)
+    password_set = int(time.time())
 
-    data = (user[1], user[2], accept_date, join_date)
+    data = (user[1], user[2], accept_date, join_date, password_set)
+
 
     c.execute(sql, data)
     conn.commit()
@@ -597,7 +600,7 @@ def get_possible_user_login_details(email):
     """
     output = None
 
-    sql = 'SELECT person_ID, password, company_ID ' \
+    sql = 'SELECT person_ID, password, company_ID, password_set ' \
           'FROM person_TBL ' \
           'WHERE login_email = %s'
 
@@ -609,11 +612,8 @@ def get_possible_user_login_details(email):
 
         values = c.fetchall()
 
-        if values[0][0] is not None:
+        if values is not None:
             output = values
-
-        else:
-            output = 'error'
     finally:
         conn_close(c, conn)
 
