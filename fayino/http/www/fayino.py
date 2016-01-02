@@ -1,13 +1,11 @@
-import datetime
+import time
 from functools import wraps
 
-import gc
-
-import time
 from flask import Flask, render_template, request, flash, redirect, session, url_for
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
 from wtforms import Form
+
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
@@ -18,8 +16,6 @@ from site_actions import login_action, User, Job, password_gen
 app = Flask(__name__)
 
 app.secret_key = 'A0Zr98j/3yX R~XHH!jiugf098uhspuswfdsdN]LWX/,?RT'
-
-
 
 
 # ####################      wrappers        ########################
@@ -86,7 +82,6 @@ def private_home():
                         finish_time = jobs.user_stop_log(user.id)
                         flash(finish_time.strftime('%Y/%m/%d %H:%M'))
 
-
     return render_template('private/index.html',
                            user=user,
                            assigned_jobs=assigned_jobs,
@@ -103,7 +98,10 @@ def user_details(person_ID):
     :param job_number:
     :return:
     """
-    user = User(session['login_details'], person_ID)
+    login_details = session['login_details']
+
+    user = User(login_details, person_ID)
+    # jobs assigned to the user
     assigned_jobs = []
     if user.assigned_jobs is not None:
 
@@ -111,6 +109,16 @@ def user_details(person_ID):
             job = Job(job_number, session['login_details'], user.id)
             assigned_jobs.append(job)
 
+    # jobs that the user has worked on
+    job_list = []
+    if user.jobs_list is not None:
+        for list_entry in user.jobs_list:
+            job_entry = Job(list_entry, login_details)
+            job_list.append((job_entry.job_number,
+                             job_entry.title,
+                             job_entry.get_times(user.id)))
+
+    # page function
     form = Form(request.form)
     if request.method == 'POST' and assigned_jobs is not None:
         if sql_functions.verify_user_company_schema(session['login_details']):
@@ -126,17 +134,16 @@ def user_details(person_ID):
                         finish_time = jobs.user_stop_log(user.id)
                         flash(finish_time.strftime('%Y/%m/%d %H:%M'))
 
-
     return render_template('private/users/main_details.html',
                            user=user,
                            assigned_jobs=assigned_jobs,
+                           job_list=job_list,
                            form=form)
 
 
 @app.route('/user/list/', methods=['POST', 'GET'])
 @login_required
 def all_user_list():
-
     # FIXME This page brakes if there is no jobs in the database
     """
     This page will show the list of the user in the company
@@ -205,37 +212,47 @@ def job_main_details(job_number):
     :return:
     """
     # TODO a lot of this code maybe able to be put in the Job Class
+
+    login_details = session['login_details']
     # Job details
     year, number = job_number.split('-')
 
     job_number_sql = (int(year), int(number))
 
-    job = Job(job_number_sql, session['login_details'])
-
+    job = Job(job_number_sql, login_details)
 
     # assigned users
     member_list = []
-    id_list = sql_functions.job_assigned_users(session['login_details'], job_number_sql)
+    id_list = sql_functions.job_assigned_users(login_details, job_number_sql)
     if id_list is not None:
         for id_value in id_list:
-            member_list.append(User(session['login_details'], id_value))
+            member_list.append(User(login_details, id_value))
     else:
         member_list = None
 
     # User list
     user_list = []
-    number_list = sql_functions.get_all_user_ids(session['login_details'])
+    number_list = sql_functions.get_all_user_ids(login_details)
 
     for number in number_list:
         if number in id_list:
             pass
         else:
-            user_list.append(User(session['login_details'], number))
+            user_list.append(User(login_details, number))
+
+    # user that have put time to the job
+    time_users = []
+    if job.timed_user_ids:
+        for user_with_time in job.timed_user_ids:
+            user_time = User(login_details, user_with_time)
+            time_users.append((user_time.id,
+                               user_time.username,
+                               user_time.job_times(job.job_number_sql)))
 
     # page form details
     form = Form(request.form)
     if request.method == 'POST':
-        if sql_functions.verify_user_company_schema(session['login_details']):
+        if sql_functions.verify_user_company_schema(login_details):
             user = session['login_details']['person_ID']
 
             if request.form['timer'] == 'Start':
@@ -251,25 +268,25 @@ def job_main_details(job_number):
 
                 for value in request.form:
                     for user in user_list:
-                        if value == 'user'+str(user.id):
+                        if value == 'user' + str(user.id):
                             user_assigned.append(user.id)
 
                 for user_id in user_assigned:
                     values = (job_number_sql[0], job_number_sql[1], user_id)
 
-                    sql_functions.assign_users_to_job(values, session['login_details'])
+                    sql_functions.assign_users_to_job(values, login_details)
 
             elif request.form['timer'] == 'Remove Members' and member_list is not None:
                 remove_member = []
                 for value in request.form:
                     for member in member_list:
-                        if value == 'member'+str(member.id):
+                        if value == 'member' + str(member.id):
                             remove_member.append(member.id)
 
                 for member_id in remove_member:
                     values = (job_number_sql[0], job_number_sql[1], member_id)
 
-                    sql_functions.remove_users_from_job(values, session['login_details'])
+                    sql_functions.remove_users_from_job(values, login_details)
         return redirect(url_for('job_main_details', job_number=job.job_number))
     current_user = User(session['login_details'])
 
@@ -277,6 +294,7 @@ def job_main_details(job_number):
                            job=job,
                            user_list=user_list,
                            member_list=member_list,
+                           time_users=time_users,
                            current_user=current_user,
                            form=form)
 
@@ -374,8 +392,6 @@ def login():
             session['manger'] = (data[0], data[3])
             user = User(login_details)
 
-
-
             session.clear()
             session['login_details'] = login_details
             session['logged_in'] = True
@@ -418,8 +434,6 @@ def sign_up_completed():
                              'company_schema': company_schema,
                              'person_ID': person_ID}
             session['manger'] = (data[0], data[3])
-
-
 
             session.clear()
             session['login_details'] = login_details
@@ -516,7 +530,6 @@ def signup():
 
 @app.route('/')
 def publicHomePage():
-
     flash(time.time())
     return render_template("Public-html/index.html")
 

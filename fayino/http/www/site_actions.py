@@ -1,12 +1,13 @@
 import datetime
-from flask import request, session, flash
-import siteForms
-import sql_functions
-from sql_functions import conn_close, connection, verify_user_company_schema
-from passlib.hash import sha256_crypt as crypt
-from pymysql import escape_string as thwart
 import string
 from random import *
+
+from flask import request, session
+from passlib.hash import sha256_crypt as crypt
+from pymysql import escape_string as thwart
+
+import sql_functions
+from sql_functions import conn_close, connection, verify_user_company_schema
 
 
 def password_gen(min_char=8, max_char=14):
@@ -65,6 +66,69 @@ class User(object):
 
         self.default_email = self.get_default_email()
         self.assigned_jobs = self.get_assigned_jobs()
+        self.jobs_list = self.jobs_worked_on()
+
+    def jobs_worked_on(self):
+        """
+        This returns a list of all the jobs a user has worked on
+        :return:
+        """
+        output = None
+        sql = u'SELECT DISTINCT job_ID_year, job_ID_number ' \
+              u'FROM job_time_log_TBL ' \
+              u'WHERE person_ID = %s'
+
+        if verify_user_company_schema(self.login_details):
+            c, conn = connection(self.login_details['company_schema'])
+
+            try:
+                c.execute(sql, self.id)
+                value = c.fetchall()
+
+                if value is not None:
+                    output = value
+            finally:
+                conn_close(c, conn)
+
+            return output
+
+    def job_times(self, job_id=None):
+
+        """
+        returns the time that has been spent on all jobs or just the one.
+        :param job_id:
+        """
+        # TODO add in the function to check between dates
+        time = 0
+        if job_id is not None:
+            sql = u'SELECT SUM(total_time) ' \
+                  u'FROM job_time_log_TBL ' \
+                  u'WHERE person_ID = %s ' \
+                  u'AND job_ID_year = %s ' \
+                  u'AND job_ID_number = %s '
+
+            data = (self.id, job_id[0], job_id[1])
+
+        else:
+
+            sql = u'SELECT SUM(total_time) ' \
+                  u'FROM job_time_log_TBL ' \
+                  u'WHERE person_ID = %s'
+            data = (self.id,)
+
+        if verify_user_company_schema(self.login_details):
+            c, conn = connection(self.login_details['company_schema'])
+
+            try:
+                c.execute(sql, data)
+                value = c.fetchone()
+
+                if value is not None:
+                    time = value[0]
+            finally:
+                conn_close(c, conn)
+
+            return time
 
     def get_default_email(self):
         """
@@ -155,6 +219,7 @@ class Job(object):
         self.company_schema = login_details['company_schema']
         self.total_time = self.get_times()
         self.user_view_running = self.user_started_log(user_id)
+        self.timed_user_ids = self.user_with_time()
 
     @staticmethod
     def _format_job_number(job):
@@ -179,6 +244,28 @@ class Job(object):
     def quoted_time(self):
         # TODO work the time formatting, check pc for extra
         return self.pTime
+
+    def user_with_time(self):
+        """
+        The list that is returned is a distinct list of user that have time to the job
+        :return:
+        """
+        output = None
+        sql = u'SELECT DISTINCT person_ID ' \
+              u'FROM job_time_log_TBL ' \
+              u'WHERE job_ID_year = %s ' \
+              u'AND job_ID_number = %s '
+
+        c, conn = connection(self.company_schema)
+        try:
+            c.execute(sql, self.job_number_sql)
+            values = c.fetchall()
+
+            if values:
+                output = values
+        finally:
+            conn_close(c, conn)
+        return output
 
     def start_time_entry(self, userID):
         """
@@ -283,7 +370,13 @@ class Job(object):
         :param user_ID:
         """
         if user_ID is not None:
-            pass
+            sql = u'SELECT SUM(total_time) ' \
+                  u'FROM job_time_log_TBL ' \
+                  u'WHERE job_ID_year = %s ' \
+                  u'AND job_ID_number = %s ' \
+                  u'AND person_ID = %s;'
+
+            data = (self.job_number_sql[0], self.job_number_sql[1], user_ID)
         else:
             sql = u'SELECT SUM(total_time) ' \
                   u'FROM job_time_log_TBL ' \

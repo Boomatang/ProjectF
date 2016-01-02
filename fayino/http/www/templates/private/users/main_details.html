@@ -21,5 +21,13 @@
 <p>No jobs have be assigned to data</p>
 {% endif %}
 
+<br><hr>
+<h3>Follow  are jobs that have been worked on.</h3>
+<p>This list should show the last ten by default but have power to show more.</p>
+
+{% for job_entry in job_list %}
+<p>Job Number: {{ job_entry[0] }} Title: {{ job_entry[1] }} Time allocated: {{ job_entry[2] }}</p>
+{% endfor %}
+
 <form id="Job" method="post"></form>
 {% endblock %}

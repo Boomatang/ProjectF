@@ -76,6 +76,24 @@ CREATE TABLE IF NOT EXISTS `company_schema_example`.`email_TBL` (
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
+CREATE TABLE IF NOT EXISTS `member_linked_jobs_TBL` (
+	 `job_ID_year` INT(4) NOT NULL, 
+	 `job_ID_number` INT(6) NOT NULL, 
+	 `person_ID` INT(11) NOT NULL, 
+	 `assigned_date` DATE NOT NULL,
+	 PRIMARY KEY (`job_ID_year`, `job_ID_number`, `person_ID`),
+	 UNIQUE INDEX `member_linked_jobs_ID_UNIQUE`
+	 (`job_ID_year`, `job_ID_number`, `person_ID` ASC),
+	 CONSTRAINT `per_link_jobs_FK`
+		FOREIGN KEY (`person_ID`) 
+		REFERENCES `member_TBL`(`person_ID`), 
+	 CONSTRAINT `job_link_jobs_FK` 
+		FOREIGN KEY (`job_ID_year` , `job_ID_number`)
+		REFERENCES `job_TBL`(`job_ID_year` , `job_ID_number`))
+ ENGINE = InnoDB 
+ DEFAULT CHARACTER SET = utf8; 
+
+
 
 -- At bottom of script
 SET SQL_MODE=@OLD_SQL_MODE;

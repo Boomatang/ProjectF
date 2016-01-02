@@ -26,6 +26,15 @@
     {% endif %}
 </form>
 
+<br><hr>
+<h3>User that have added to to this job is listed below</h3>
+{% for entry in time_users %}
+
+<p>ID : {{ entry[0] }} |
+    <a href="{{ url_for('user_details', person_ID=entry[0]) }}"> {{ entry[1] }} </a>
+    | {{ entry[2] }}</p>
+
+{% endfor %}
 
 <br>
 <hr>
