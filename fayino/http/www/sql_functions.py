@@ -36,7 +36,70 @@ def conn_close(c, conn):
     gc.collect()
 
 
+def get_company_person_ID(master_ID, schema=None):
+    """
+    Get the ID of the company member that is logging in
+    :type schema: object
+    :type master_ID: object
+    """
+
+    output = None
+
+    sql = u'SELECT person_ID ' \
+          u'FROM member_TBL ' \
+          u'WHERE login_master_ID = %s'
+
+    data = (master_ID,)
+
+    c, conn = connection(schema)
+
+    try:
+        c.execute(sql, data)
+
+        value = c.fetchone()
+
+        if value is not None:
+            output = value[0]
+    finally:
+        conn_close(c, conn)
+
+    return output
+
+
+def get_company_schema(company_ID=None):
+    """
+    Get the value of the company schema
+    """
+    output = None
+
+    sql = u'SELECT company_schema ' \
+          u'FROM company_TBL ' \
+          u'WHERE company_ID = %s'
+
+    data = (company_ID,)
+
+    c, conn = connection(master)
+
+    try:
+        c.execute(sql, data)
+        value = c.fetchone()
+
+        if value is not None:
+            output = value[0]
+    finally:
+        conn_close(c, conn)
+
+    return output
+
+
 def add_user_to_company_member_tbl(login_details, username='username'):
+    """
+    Used to copy the user details from the master into the company schema.
+    Not all details are copied over.
+    :param login_details:
+    :param username:
+    """
+    output = None
 
     get_user_sql = u'SELECT person_ID, join_date, accept_terms ' \
                    u'FROM person_TBL ' \
@@ -45,6 +108,10 @@ def add_user_to_company_member_tbl(login_details, username='username'):
     insert_user_sql = u'INSERT INTO member_TBL (' \
                       u'login_master_ID, join_date, accept_terms, username) ' \
                       u'VALUES (%s, %s, %s, %s)'
+
+    get_user_ID_sql = u'SELECT person_ID ' \
+                      u'FROM member_TBL ' \
+                      u'WHERE login_master_ID = %s'
 
     if verify_user_company_schema(login_details):
         get_user_data = (login_details['user_ID'],)
@@ -59,11 +126,22 @@ def add_user_to_company_member_tbl(login_details, username='username'):
 
         if data is not None:
             insert_user_data = (data[0], data[1], data[2], username)
+            get_user_ID_data = (data[0],)
+
             c, conn = connection(login_details['company_schema'])
             try:
                 c.execute(insert_user_sql, insert_user_data)
+                conn.commit()
+
+                c.execute(get_user_ID_sql, get_user_ID_data)
+                value = c.fetchone()
+
+                if value is not None:
+                    output = value[0]
+
             finally:
                 conn_close(c, conn)
+    return output
 
 
 def create_company_schema_tables(schema_name=None):
@@ -86,15 +164,47 @@ def create_company_schema_tables(schema_name=None):
                  u'`last_name` VARCHAR(45) NULL DEFAULT NULL, ' \
                  u'`username` VARCHAR(100) NULL DEFAULT NULL, ' \
                  u'`DOB` DATE NULL DEFAULT NULL, ' \
-                 u'`joinDate` DATE NULL DEFAULT NULL, ' \
+                 u'`join_date` DATE NULL DEFAULT NULL, ' \
                  u'`accept_terms` DATE NOT NULL, ' \
                  u'`login_master_ID` INT(11) NOT NULL, ' \
                  u'PRIMARY KEY (`person_ID`), ' \
                  u'UNIQUE INDEX `person_ID_UNIQUE` (`person_ID` ASC), ' \
+                 u'UNIQUE INDEX `login_master_ID_UNIQUE` (`login_master_ID` ASC),' \
                  u'UNIQUE INDEX `user_name_UNIQUE` (`username` ASC)) ' \
                  u'ENGINE = InnoDB ' \
                  u'DEFAULT CHARACTER SET = utf8;'
 
+    job_tbl = u'CREATE TABLE IF NOT EXISTS `job_TBL` (' \
+              u'`job_ID_year` INT(4) NOT NULL, ' \
+              u'`job_ID_number` INT(6) NOT NULL, ' \
+              u'`title` VARCHAR(150) NOT NULL, ' \
+              u'`description` VARCHAR(1000) NULL DEFAULT NULL, ' \
+              u'`entry_date` DATE NOT NULL, ' \
+              u'`quoted_time` INT(11) NULL DEFAULT NULL, ' \
+              u'`quoted_cost` FLOAT(10,2) NULL DEFAULT NULL, ' \
+              u'PRIMARY KEY (`job_ID_year`, `job_ID_number`)) ' \
+              u'ENGINE = InnoDB ' \
+              u'DEFAULT CHARACTER SET = utf8; '
+
+    job_time_log_tbl = u'CREATE TABLE IF NOT EXISTS `job_time_log_TBL` (' \
+                       u'`job_time_log_ID` INT(11) NOT NULL AUTO_INCREMENT, ' \
+                       u'`job_ID_year` INT(4) NOT NULL, ' \
+                       u'`job_ID_number` INT(6) NOT NULL, ' \
+                       u'`person_ID` INT(11) NOT NULL, ' \
+                       u'`start_time` DATETIME NOT NULL, ' \
+                       u'`finish_time` DATETIME NULL DEFAULT NULL, ' \
+                       u'`total_time` INT(11) NULL DEFAULT NULL, ' \
+                       u'PRIMARY KEY (`job_time_log_ID`), ' \
+                       u'INDEX `per_job_FK` (`person_ID` ASC), ' \
+                       u'INDEX `job_time_FK` (`job_ID_year` ASC, `job_ID_number` ASC), ' \
+                       u'CONSTRAINT `job_time_FK` ' \
+                       u'FOREIGN KEY (`job_ID_year` , `job_ID_number`) ' \
+                       u'REFERENCES `job_TBL` (`job_ID_year` , `job_ID_number`), ' \
+                       u'CONSTRAINT `per_job_FK` ' \
+                       u'FOREIGN KEY (`person_ID`) ' \
+                       u'REFERENCES `person_TBL` (`person_ID`)) ' \
+                       u'ENGINE = InnoDB ' \
+                       u'DEFAULT CHARACTER SET = utf8; '
     c, conn = connection(schema_name)
 
     try:
@@ -104,6 +214,12 @@ def create_company_schema_tables(schema_name=None):
             conn.commit()
 
         c.execute(member_tbl)
+        conn.commit()
+
+        c.execute(job_tbl)
+        conn.commit()
+
+        c.execute(job_time_log_tbl)
         conn.commit()
 
         for line in bottom:
@@ -353,25 +469,35 @@ def link_user_company(userID, companyID):
     conn_close(c, conn)
 
 
-# TODO these functions can be writen better
-def get_uesr_details(userID):
-    sql = 'SELECT * ' \
-          'FROM person_TBL ' \
-          'WHERE personID = %s'
+def get_user_details(login_details):
+    """
+    Get a set amount of details from the member table in the company schema.
+    Use in the User class mostly
+    :param login_details:
+    :return:
+    """
+    output = None
+    sql = 'SELECT person_ID, first_name, last_name, username ' \
+          'FROM member_TBL ' \
+          'WHERE person_ID = %s'
 
-    data = (userID,)
+    data = (login_details['person_ID'],)
 
-    c, conn = connection()
-    c.execute(sql, data)
+    if verify_user_company_schema(login_details):
 
-    values = c.fetchone()
+        c, conn = connection(login_details['company_schema'])
+        try:
+            c.execute(sql, data)
 
-    if values[0] is not None:
-        output = values
+            values = c.fetchone()
 
-    else:
-        output = ('error',)
+            if values is not None:
+                output = values
 
+            else:
+                output = ('error',)
+        finally:
+            conn_close(c, conn)
     return output
 
 
@@ -397,25 +523,35 @@ def get_company_details(companyID):
     return output
 
 
-def get_user_login_details(email):
-    sql = 'SELECT personID, password ' \
+def get_possible_user_login_details(email):
+    """
+    As a user can be part of more than one company.
+    This returns a list of possible matches for the email address
+    :param email:
+    :return:
+    """
+    output = None
+
+    sql = 'SELECT person_ID, password, company_ID ' \
           'FROM person_TBL ' \
-          'WHERE loginEmail = %s'
+          'WHERE login_email = %s'
 
     data = (email,)
 
-    c, conn = connection()
-    c.execute(sql, data)
+    c, conn = connection(master)
+    try:
+        c.execute(sql, data)
 
-    values = c.fetchone()
+        values = c.fetchall()
 
-    if values[0] is not None:
-        output = values
+        if values[0][0] is not None:
+            output = values
 
-    else:
-        output = ('error',)
+        else:
+            output = 'error'
+    finally:
+        conn_close(c, conn)
 
-    conn_close(c, conn)
     return output
 
 

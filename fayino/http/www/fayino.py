@@ -1,23 +1,24 @@
-import datetime
 from functools import wraps
-from wtforms import Form
+
 from flask import Flask, render_template, request, flash, redirect, session, url_for
 from passlib.hash import sha256_crypt as crypt
 from pymysql import escape_string as thwart
-#from flask_login import LoginManager, login_user, login_required, current_user
+from wtforms import Form
+# from flask_login import LoginManager, login_user, login_required, current_user
 import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company
-from site_actions import login_action, check_session, User, Job, password_gen
-
+from site_actions import login_action, User, Job, password_gen
 
 # ####################      Set up        ########################
 
 app = Flask(__name__)
 
 app.secret_key = 'A0Zr98j/3yX R~XHH!jiugf098uhspuswfdsdN]LWX/,?RT'
-#login_manager = LoginManager()
-#login_manager.init_app(app)
+
+
+# login_manager = LoginManager()
+# login_manager.init_app(app)
 
 
 # ####################      wrappers        ########################
@@ -64,6 +65,7 @@ def testing():
 @app.route('/home/')
 @login_required
 def private_home():
+    flash(session['login_details']['person_ID'])
     return render_template('private/index.html')
 
 
@@ -72,7 +74,6 @@ def private_home():
 @app.route('/user/review/<added_user>', methods=['POST', 'GET'])
 @login_required
 def user_review(added_user):
-
     new_user = User(added_user)
 
     return render_template('private/users/review.html', new_user=new_user)
@@ -81,7 +82,6 @@ def user_review(added_user):
 @app.route('/users/create', methods=['POST', 'GET'])
 @login_required
 def user_create():
-
     form = siteForms.CreateNewUser(request.form)
     user_name = sql_functions.get_sudo_username()
     password = password_gen()
@@ -109,12 +109,12 @@ def user_create():
                            user_name=user_name,
                            password=password)
 
+
 # ####################      Job Related Pages        ########################
 
-@app.route('/jobs/<job_number>',  methods=['POST', 'GET'])
+@app.route('/jobs/<job_number>', methods=['POST', 'GET'])
 @login_required
 def job_main_details(job_number):
-
     """
     Bring the overview of all the details to show
     :param job_number:
@@ -147,7 +147,7 @@ def job_main_details(job_number):
     return render_template('private/jobs/main_details.html', job=job, form=form)
 
 
-@app.route('/jobs/',  methods=['POST', 'GET'])
+@app.route('/jobs/', methods=['POST', 'GET'])
 @login_required
 def jobs_list():
     """
@@ -163,10 +163,9 @@ def jobs_list():
     return render_template('private/jobs/list.html', job_list=job_list)
 
 
-@app.route('/newjoboverview/',  methods=['POST', 'GET'])
+@app.route('/newjoboverview/', methods=['POST', 'GET'])
 @login_required
 def new_job_overview():
-
     """
     Page gives a overview of the job that had been created in the page before hand
     :return:
@@ -182,7 +181,6 @@ def new_job_overview():
 @app.route('/createNewJob/', methods=['POST', 'GET'])
 @login_required
 def CreateJobPage():
-
     """
     Code to make a job in the basic form is here
     :return:
@@ -202,7 +200,6 @@ def CreateJobPage():
         return redirect('/newjoboverview/')
 
     return render_template('private/jobs/create.html', form=form)
-
 
 
 # ####################      Login Related Pages        ########################
@@ -229,13 +226,13 @@ def login():
         data, confirm, input_email = login_action(form)
 
         if confirm:
-            #check_session(input_email)
+            # check_session(input_email)
             user = User(data[0])
 
             session['user'] = user.id
             session['logged_in'] = True
 
-            #login_user(user)
+            # login_user(user)
 
             flash('Logged in successfully.')
             return redirect('/home/')
@@ -254,20 +251,28 @@ def editSignUp():
 
 
 @app.route("/signUpCompleted/", methods=['POST', 'GET'])
-def signUpComplated():
-
+def sign_up_completed():
+    """
+    This function forces the user to re-login to make user their details are in order.
+    It will also clean up any left overs that may have been left in the session cookie.
+    :return:
+    """
     form = siteForms.LoginConfirm(request.form)
     if request.method == 'POST':
-        data, confirm, input_email = login_action(form)
+        data, confirm = login_action(form)
 
         if confirm:
-            check_session(input_email)
-            user = User(data[0])
 
-            session['user'] = user.id
+            company_schema = sql_functions.get_company_schema(data[2])
+            person_ID = sql_functions.get_company_person_ID(data[0], company_schema)
+
+            login_details = {'user_ID': data[0],
+                             'company_ID': data[2],
+                             'company_schema': company_schema,
+                             'person_ID': person_ID}
+            session.clear()
+            session['login_details'] = login_details
             session['logged_in'] = True
-
-            #login_user(user)
 
             flash('Logged in successfully.')
             return redirect('/home/')
@@ -280,7 +285,6 @@ def signUpComplated():
 
 @app.route("/confirmUserDetails/")
 def confirm_user_setup_details():
-
     # Setup company schema for user
     # Add the user to the company schema
 
@@ -292,20 +296,15 @@ def confirm_user_setup_details():
         sql_functions.create_company_schema_tables(company_schema)
 
         # Add the user to the company schema
-        sql_functions.add_user_to_company_member_tbl(session['login_details'], session['temp_user_details'][1])
+        person_ID = sql_functions.add_user_to_company_member_tbl(session['login_details'],
+                                                                 session['temp_user_details'][1])
 
+        session['login_details']['person_ID'] = person_ID
 
-
-    user = sql_functions.get_uesr_details(session['userID'])
-    company = sql_functions.get_company_details(session['companyID'])
-
-    user_data = {'userName': user[3],
-                 'email': user[9],
-                 'password': '******',
-                 'companyName': company[1]}
+    user = User(session['login_details'])
 
     return render_template("SetUp/confirmDetails.html",
-                           user_data=user_data)
+                           user=user)
 
 
 @app.route('/companyDetails/', methods=['POST', 'GET'])
@@ -326,7 +325,8 @@ def set_company_details():
 
         login_details = {'user_ID': session['temp_user_details'][0],
                          'company_ID': company_ID,
-                         'company_schema': company_schema}
+                         'company_schema': company_schema,
+                         'person_ID': ''}
 
         session['login_details'] = login_details
 
@@ -346,9 +346,9 @@ def signup():
 
     if request.method == 'POST' and form.validate():
         sign_up_form = (thwart(form.user_name.data),
-                      thwart(form.userEmail.data),
-                      crypt.encrypt(thwart(form.password.data)),
-                      thwart(str(form.accept_terms.data)))
+                        thwart(form.userEmail.data),
+                        crypt.encrypt(thwart(form.password.data)),
+                        thwart(str(form.accept_terms.data)))
 
         userID = sql_functions.sign_up_user(sign_up_form)
         session.clear()
@@ -374,6 +374,7 @@ def publicHomePage():
 @app.route('/not_built/')
 def not_built():
     return render_template('error/not_built.html')
+
 
 @app.errorhandler(404)
 def fail404(e):

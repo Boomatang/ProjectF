@@ -25,10 +25,11 @@ def login_action(form):
         user = thwart(form.userEmail.data)
         password = thwart(form.password.data)
 
-        system_data = sql_functions.get_user_login_details(user)
+        system_data = sql_functions.get_possible_user_login_details(user)
 
-        if crypt.verify(password, system_data[1]):
-            return system_data, True, user
+        for value in system_data:
+            if crypt.verify(password, value[1]):
+                return value, True
 
 
 def check_session(email):
@@ -48,14 +49,18 @@ def check_session(email):
 
 
 class User(object):
-    def __init__(self, userID):
-        self.data = sql_functions.get_uesr_details(userID)
+    """
+    This is the user class all the details that maybe needed for a user should go in here.
+    At a later date this will be used for the login manger too.
+    """
+
+    def __init__(self, login_details):
+        self.data = sql_functions.get_user_details(login_details)
 
         self.id = self.data[0]
-        self.email = self.data[9]
+        self.first_name = self.data[1]
+        self.last_name = self.data[2]
         self.username = self.data[3]
-        self.f_name = self.data[1]
-        self.l_name = self.data[2]
 
     @property
     def is_authenticated(self):
