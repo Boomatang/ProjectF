@@ -40,8 +40,6 @@ def check_session(email):
     else:
         session.clear()
         session['count'] = 1
-        # TODO remove this flash massage only for testing
-        flash('Values did not match')
 
 
 class User(object):

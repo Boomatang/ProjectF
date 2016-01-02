@@ -54,8 +54,8 @@ class Signup(Form):
     confirm = PasswordField(u'ReType your Password',
                             validators=[validators.input_required()])
     # FIXME the href is not rendering out as it should there is no link been placed
-    accept_terms = BooleanField(u'I accept the &lt;a href={{url_for(termsandcoditions)}}&gt;'
-                                u'Terms and Conditions&lt;/a&gt;.',
+    accept_terms = BooleanField(r'I accept the &lt;a href={{url_for(termsandcoditions)}}&gt;'
+                                r'Terms and Conditions&lt;/a&gt;.',
                                 validators=[validators.input_required()])
 
 

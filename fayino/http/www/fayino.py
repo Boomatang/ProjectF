@@ -288,12 +288,13 @@ def jobs_list():
     Gives a list of all the jobs.
     Fillers will be added at a later date but for now this is all it does.
     """
-    # FIXME This page brakes if there is no jobs in the database
+
     job_list = []
     number_list = sql_functions.get_all_job_numbers(session['login_details'])
 
-    for number in number_list:
-        job_list.append(Job(number, session['login_details']))
+    if number_list is not None:
+        for number in number_list:
+            job_list.append(Job(number, session['login_details']))
 
     return render_template('private/jobs/list.html', job_list=job_list)
 

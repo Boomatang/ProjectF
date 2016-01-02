@@ -737,7 +737,7 @@ def get_all_job_numbers(login_details):
 
         values = c.fetchall()
 
-        if len(values) > 0:
+        if values is not None:
             output = values
         else:
             output = 'List size error'
