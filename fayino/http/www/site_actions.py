@@ -54,13 +54,21 @@ class User(object):
     At a later date this will be used for the login manger too.
     """
 
-    def __init__(self, login_details):
-        self.data = sql_functions.get_user_details(login_details)
+    def __init__(self, login_details, user_ID=None):
+        if user_ID is None:
+            self.data = sql_functions.get_user_details(login_details)
+        else:
+            self.login_details = login_details
+            self.login_details['person_ID'] = user_ID
+            self.login_details['user_ID'] = sql_functions.get_local_master_ID(user_ID, login_details)
+
+            self.data = sql_functions.get_user_details(self.login_details)
 
         self.id = self.data[0]
         self.first_name = self.data[1]
         self.last_name = self.data[2]
         self.username = self.data[3]
+
 
     @property
     def is_authenticated(self):
@@ -87,8 +95,8 @@ class Job(object):
     More is to be added here and the time values should be called by functions the variable directly.
     """
 
-    def __init__(self, job_number):
-        self.data = sql_functions.get_job_details(job_number)
+    def __init__(self, job_number, login_details):
+        self.data = sql_functions.get_job_details(job_number, login_details)
         self.title = self.data[0]
         self.description = self.data[1]
         self.data_block = self.data[2]
@@ -96,7 +104,9 @@ class Job(object):
         self.pCost = self.data[4]
         self.job_number = self._format_job_number(job_number)
         self.job_number_sql = job_number
+        self.company_schema = login_details['company_schema']
         self.total_time = self.get_times()
+
 
     @staticmethod
     def _format_job_number(job):
@@ -119,7 +129,7 @@ class Job(object):
         return string_job_number
 
     def quoted_time(self):
-        # TODO work the time formatting, check pc for etxra
+        # TODO work the time formatting, check pc for extra
         return self.pTime
 
     def start_time_entry(self, userID):
@@ -131,43 +141,47 @@ class Job(object):
         start = datetime.datetime.now()
 
         sql = u'INSERT INTO job_time_log_TBL (' \
-              u'jobIDyear, jobIDnum, personID, startTime) ' \
+              u'job_ID_year, job_ID_number, person_ID, start_time) ' \
               u'VALUES (%s, %s, %s, %s)'
         data = (self.job_number_sql[0], self.job_number_sql[1], userID, start)
 
-        c, conn = connection()
-        c.execute(sql, data)
-        conn_close(c, conn)
+        c, conn = connection(self.company_schema)
+        try:
+            c.execute(sql, data)
+        finally:
+            conn_close(c, conn)
 
         return start
 
     def user_started_log(self, userID):
         """
-        This function finds the  last time entry the user has started but not finished.
+        This function finds the last time entry the user has started but not finished.
         This works on the bases that there will ever only be one entry that is has a finish time that is null for that user.
         :param userID:
         """
 
         sql = u'SELECT * ' \
               u'FROM job_time_log_TBL ' \
-              u'WHERE personID = %s ' \
-              u'AND jobIDyear = %s ' \
-              u'AND jobIDnum = %s ' \
-              u'AND finishTime IS NULL'
+              u'WHERE person_ID = %s ' \
+              u'AND job_ID_year = %s ' \
+              u'AND job_ID_number = %s ' \
+              u'AND finish_time IS NULL'
 
         data = (userID, self.job_number_sql[0], self.job_number_sql[1])
 
-        c, conn = connection()
-        c.execute(sql, data)
+        c, conn = connection(self.company_schema)
+        try:
+            c.execute(sql, data)
 
-        value = c.fetchone()
+            value = c.fetchone()
 
-        if value is not None:
-            output = True
+            if value is not None:
+                output = True
 
-        else:
-            output = False
-
+            else:
+                output = False
+        finally:
+            conn_close(c, conn)
         return output
 
     def user_stop_log(self, userID):
@@ -180,33 +194,33 @@ class Job(object):
         finish_time = datetime.datetime.now()
 
         sql = u'UPDATE job_time_log_TBL ' \
-              u'SET finishTime = %s, ' \
-              u'totalTime = %s ' \
+              u'SET finish_time = %s, ' \
+              u'total_time = %s ' \
               u'WHERE job_time_log_ID = %s'
 
-        sql2 = u'SELECT job_time_log_ID, startTime ' \
+        sql2 = u'SELECT job_time_log_ID, start_time ' \
                u'FROM job_time_log_TBL ' \
-               u'WHERE personID = %s ' \
-               u'AND jobIDyear = %s ' \
-               u'AND jobIDnum = %s ' \
-               u'AND finishTime IS NULL;'
+               u'WHERE person_ID = %s ' \
+               u'AND job_ID_year = %s ' \
+               u'AND job_ID_number = %s ' \
+               u'AND finish_time IS NULL;'
 
         data2 = (userID, self.job_number_sql[0], self.job_number_sql[1])
 
-        c, conn = connection()
+        c, conn = connection(self.company_schema)
+        try:
+            c.execute(sql2, data2)
+            value = c.fetchone()
+            if value is not None:
+                time_ID = value[0]
+                start = value[1]
 
-        c.execute(sql2, data2)
-        value = c.fetchone()
-        if value is not None:
-            time_ID = value[0]
-            start = value[1]
+                total_time = int(finish_time.strftime('%s')) - int(start.strftime('%s'))
 
-            total_time = int(finish_time.strftime('%s')) - int(start.strftime('%s'))
-
-            data = (finish_time, total_time, time_ID)
-            c.execute(sql, data)
-
-        conn_close(c, conn)
+                data = (finish_time, total_time, time_ID)
+                c.execute(sql, data)
+        finally:
+            conn_close(c, conn)
 
         return finish_time
 
@@ -223,24 +237,24 @@ class Job(object):
         if user_ID is not None:
             pass
         else:
-            sql = u'SELECT SUM(totalTime) ' \
+            sql = u'SELECT SUM(total_time) ' \
                   u'FROM job_time_log_TBL ' \
-                  u'WHERE jobIDyear = %s ' \
-                  u'and jobIDnum = %s;'
+                  u'WHERE job_ID_year = %s ' \
+                  u'and job_ID_number = %s;'
 
             data = (self.job_number_sql[0], self.job_number_sql[1])
 
-        c, conn = connection()
+        c, conn = connection(self.company_schema)
+        try:
+            c.execute(sql, data)
+            time = c.fetchone()
 
-        c.execute(sql, data)
-        time = c.fetchone()
+            if time is not None:
+                output = time[0]
 
-        if time is not None:
-            output = time[0]
-
-        else:
-            output = 0
-
-        conn_close(c, conn)
+            else:
+                output = 0
+        finally:
+            conn_close(c, conn)
 
         return output

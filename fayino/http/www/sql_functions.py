@@ -159,7 +159,7 @@ def create_company_schema_tables(schema_name=None):
               u'SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;']
 
     member_tbl = u'CREATE TABLE IF NOT EXISTS `member_TBL` ( ' \
-                 u'`person_ID` INT(11) NOT NULL, ' \
+                 u'`person_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
                  u'`first_name` VARCHAR(45) NULL DEFAULT NULL, ' \
                  u'`last_name` VARCHAR(45) NULL DEFAULT NULL, ' \
                  u'`username` VARCHAR(100) NULL DEFAULT NULL, ' \
@@ -202,7 +202,7 @@ def create_company_schema_tables(schema_name=None):
                        u'REFERENCES `job_TBL` (`job_ID_year` , `job_ID_number`), ' \
                        u'CONSTRAINT `per_job_FK` ' \
                        u'FOREIGN KEY (`person_ID`) ' \
-                       u'REFERENCES `person_TBL` (`person_ID`)) ' \
+                       u'REFERENCES `member_TBL` (`person_ID`)) ' \
                        u'ENGINE = InnoDB ' \
                        u'DEFAULT CHARACTER SET = utf8; '
     c, conn = connection(schema_name)
@@ -286,6 +286,32 @@ def create_company_schema(company_schema=None):
         c.execute(sql)
     finally:
         conn_close(c, conn)
+
+
+def check_new_username(username, login_details):
+    """
+    This function checks to see if a user name has been used before
+    :param login_details:
+    :param username:
+    :return:
+    """
+    output = False
+
+    sql = u'SELECT username ' \
+          u'FROM member_TBL ' \
+          u'WHERE userName = %s;'
+
+    data = (username,)
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+        try:
+            c.execute(sql, data)
+            info = c.fetchone()
+            if info is None:
+                output = True
+        finally:
+            conn_close(c, conn)
+    return output
 
 
 def check_new_username_and_email(username, email):
@@ -555,188 +581,250 @@ def get_possible_user_login_details(email):
     return output
 
 
-def create_job(values=[]):
+def create_job(values, login_details):
     """
     Create a job in the database, only basic information is add at this time and in the future more has to be added.
     This function will break not all 4 values are passed in.
+    :param login_details:
     :param values: List of up to 4 values passed in as strings. 2 is the minimum required.
     """
     # FIXME This function will break not all 4 values are passed in.
+    job_number = None
+
     current_year = datetime.date.today()
     current_year = current_year.year
 
-    next_number = next_job_number(current_year)
+    next_number = next_job_number(current_year, login_details)
 
     sql = u'INSERT INTO job_TBL ' \
-          u'(jobIDyear, jobIDnum, title, description, entryDate, pTime, pCost)' \
+          u'(job_ID_year, job_ID_number, title, description, entry_date, quoted_Time, quoted_Cost)' \
           u'VALUES (%s, %s, %s, %s, NOW(), %s, %s)'
 
     hm = values[3]
     h, m = hm.split(':')
 
-    ptime = (int(m) + (int(h) * 60)) * 60
+    quoted_time = (int(m) + (int(h) * 60)) * 60
 
-    data = (current_year, next_number, values[0], values[1], ptime, float(values[2]))
+    data = (current_year, next_number, values[0], values[1], quoted_time, float(values[2]))
 
-    c, conn = connection()
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+        try:
+            c.execute(sql, data)
+        finally:
+            conn_close(c, conn)
 
-    c.execute(sql, data)
-
-    conn_close(c, conn)
-
-    job_number = (current_year, next_number)
+        job_number = (current_year, next_number)
 
     return job_number
 
 
-def next_job_number(current_year):
+def next_job_number(current_year, login_details):
     """
     Use to find the next job number for the for the year in question
+    :param login_details:
     :param current_year: In the format of a INT of length 4
     :return: INT of unknown length
     """
-    sql = u'SELECT MAX(jobIDnum) ' \
+    output = None
+    sql = u'SELECT MAX(job_ID_number) ' \
           u'FROM job_TBL ' \
-          u'WHERE jobIDyear = %s'
+          u'WHERE job_ID_year = %s'
 
     data = (current_year,)
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+        try:
+            c.execute(sql, data)
 
-    c, conn = connection()
+            value = c.fetchone()
 
-    c.execute(sql, data)
-
-    value = c.fetchone()
-
-    if value[0] is not None:
-        output = int(value[0]) + 1
-    else:
-        output = 1
-
-    conn_close(c, conn)
+            if value[0] is not None:
+                output = int(value[0]) + 1
+            else:
+                output = 1
+        finally:
+            conn_close(c, conn)
 
     return output
 
 
-def get_job_details(job_number):
+def get_job_details(job_number, login_details):
     """
     Used to bring all the information about the job number from the database
+    :param login_details:
     :param job_number: requires a tuple of 2 integers that are existing job number keys
     :return: a set record from the database
     """
     # TODO add in a fix to check to see if the input keys are existing in the database.
-
-    sql = u'SELECT title, description, entryDate, pTime, pCost ' \
+    output = None
+    sql = u'SELECT title, description, entry_date, quoted_time, quoted_cost ' \
           u'FROM job_TBL ' \
-          u'WHERE jobIDyear = %s ' \
-          u'AND jobIDnum = %s'
+          u'WHERE job_ID_year = %s ' \
+          u'AND job_ID_number = %s'
 
     data = (job_number[0], job_number[1])
 
-    c, conn = connection()
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+        try:
+            c.execute(sql, data)
 
-    c.execute(sql, data)
+            value = c.fetchone()
 
-    value = c.fetchone()
-
-    if value[0] is not None:
-        output = value
-
-    else:
-        output = None
-
-    conn_close(c, conn)
+            if value[0] is not None:
+                output = value
+        finally:
+            conn_close(c, conn)
 
     return output
 
 
-def get_all_job_numbers():
+def get_all_job_numbers(login_details):
     """
     This function will return a list of all the job numbers that is currently in be database
+    :param login_details:
     """
-    # TODO this function should only get the results for the company that is logged in
-    sql = u'SELECT jobIDyear, jobIDnum ' \
+
+    sql = u'SELECT job_ID_year, job_ID_number ' \
           u'FROM job_TBL'
 
     data = ()
 
-    c, conn = connection()
+    c, conn = connection(login_details['company_schema'])
+    try:
+        c.execute(sql, data)
 
-    c.execute(sql, data)
+        values = c.fetchall()
 
-    values = c.fetchall()
-
-    if len(values) > 1:
-        output = values
-    else:
-        output = 'List size error'
-
-    conn_close(c, conn)
+        if len(values) > 0:
+            output = values
+        else:
+            output = 'List size error'
+    finally:
+        conn_close(c, conn)
 
     return output
 
 
-def get_sudo_username():
+def get_sudo_username(login_details):
     """
     Gets the default username for the adding of user to the company
+    :param login_details: These are the values stored in the session cookie
     """
+    name = 'UserName'
+    sql = u'SELECT MAX(person_ID) ' \
+          u'FROM member_TBL '
 
-    sql = u'SELECT MAX(personID) ' \
-          u'FROM person_TBL '
-    c, conn = connection()
+    if verify_user_company_schema(login_details):
+        c, conn = connection(login_details['company_schema'])
+        try:
+            c.execute(sql)
 
-    c.execute(sql)
+            value = c.fetchone()
 
-    value = c.fetchone()
+            if value is not None:
+                number = value[0]
+                number += 1
 
-    if value is not None:
-        number = value[0]
-        number += 1
-
-        name = 'UserName' + str(number)
-
-    else:
-        name = 'UserName'
+                name = 'UserName' + str(number)
+        finally:
+            conn_close(c, conn)
 
     return name
 
 
-def add_user(data_set):
+def get_local_master_ID(user_ID, login_details):
+    """
+    This method will get the master ID number for a member.
+    It would be expected that this function would be run by someone looking up a person not the person them self's
+    :param user_ID:
+    :param login_details:
+    """
+    master_id = None
+    find_id = u'SELECT login_master_ID ' \
+              u'FROM member_TBL ' \
+              u'WHERE person_ID = %s'
+
+    if verify_user_company_schema(login_details):
+        data = (user_ID,)
+
+        c, conn = connection(login_details['company_schema'])
+
+        try:
+            c.execute(find_id, data)
+            value = c. fetchone()
+
+            if value is not None:
+                master_id = value[0]
+
+        finally:
+            conn_close(c, conn)
+
+    return master_id
+
+
+def add_user(data_set, login_details):
     """
     Make a new user. This would be do by the admin for the company
+    :param login_details:
     :param data_set:
     """
+    person_ID = None
+    insert_master_sql = u'INSERT INTO person_TBL ' \
+                        u'(login_email, password, ' \
+                        u'accept_terms, join_date, company_ID) ' \
+                        u'VALUES (%s, %s, %s, %s, %s)'
 
-    c, conn = connection()
+    master_ID_sql = u'SELECT person_ID ' \
+                    u'FROM person_TBL ' \
+                    u'WHERE login_email = %s ' \
+                    u'AND password = %s'
+
+    insert_local_sql = u'INSERT INTO member_TBL ' \
+                       u'(first_name, last_name, username, join_date, accept_terms, login_master_ID) ' \
+                       u'VALUES (%s, %s, %s, %s, %s, %s);'
+
+    person_ID_sql = u'SELECT person_ID ' \
+                    u'FROM member_TBL ' \
+                    u'WHERE login_master_ID = %s'
 
     joinDate = datetime.date.today()
     joinDate = str(joinDate.year) + "-" + str(joinDate.month) + "-" + str(joinDate.day)
 
-    sql2 = u'SELECT MAX(personID) ' \
-           u'FROM person_TBL'
+    if verify_user_company_schema(login_details):
+        mc, mconn = connection(master)
+        c, conn = connection(login_details['company_schema'])
 
-    c.execute(sql2)
+        try:
+            data = (data_set[1], data_set[4], joinDate, joinDate, login_details['company_ID'])
+            mc.execute(insert_master_sql, data)
+            mconn.commit()
 
-    personID = c.fetchone()
-    personID = personID[0] + 1
+            data = (data_set[1], data_set[4])
+            mc.execute(master_ID_sql, data)
 
-    insert_sql = u'INSERT INTO person_TBL ' \
-                 u'(personID, userName, loginEmail, password, ' \
-                 u'acceptTErms, joinDate) ' \
-                 u'VALUES (%s, %s, %s, %s, %s, %s)'
+            value = mc.fetchone()
 
-    insert_data = (personID, data_set[0], data_set[1], data_set[4], joinDate, joinDate)
-    c.execute(insert_sql, insert_data)
-    conn.commit()
+            if value is not None:
+                master_ID = value[0]
+            else:
+                master_ID = 'error'
 
-    update_sql = u'UPDATE person_TBL ' \
-                 u'SET fName = %s,' \
-                 u'lName = %s ' \
-                 u'WHERE personId = %s;'
+            if master_ID != 'error':
+                data = (data_set[2], data_set[3], data_set[0], joinDate, joinDate, master_ID)
+                c.execute(insert_local_sql, data)
+                conn.commit()
 
-    update_data = (data_set[2], data_set[3], personID)
+                data = (master_ID,)
+                c.execute(person_ID_sql, data)
+                value = c.fetchone()
 
-    c.execute(update_sql, update_data)
+                if value is not None:
+                    person_ID = value[0]
 
-    conn_close(c, conn)
+        finally:
+            conn_close(mc, mconn)
+            conn_close(c, conn)
 
-    return personID
+    return person_ID

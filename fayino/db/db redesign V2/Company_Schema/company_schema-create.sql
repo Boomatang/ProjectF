@@ -1,3 +1,4 @@
+DROP SCHEMA `company_schema_example`;
 CREATE SCHEMA IF NOT EXISTS `company_schema_example`;
 USE `company_schema_example`;
 
@@ -9,7 +10,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
 -- Member table
 CREATE TABLE IF NOT EXISTS `company_schema_example`.`member_TBL` (
-  `person_ID` INT(11) NOT NULL,
+  `person_ID` INT(11) AUTO_INCREMENT NOT NULL,
   `first_name` VARCHAR(45) NULL DEFAULT NULL,
   `last_name` VARCHAR(45) NULL DEFAULT NULL,
   `username` VARCHAR(100) NULL DEFAULT NULL,
@@ -55,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `company_schema_example`.`job_time_log_TBL` (
     REFERENCES `company_schema_example`.`job_TBL` (`job_ID_year` , `job_ID_number`),
   CONSTRAINT `per_job_FK`
     FOREIGN KEY (`person_ID`)
-    REFERENCES `company_schema_example`.`person_TBL` (`person_ID`))
+    REFERENCES `company_schema_example`.`member_TBL` (`person_ID`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 

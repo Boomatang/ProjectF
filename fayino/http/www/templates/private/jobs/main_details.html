@@ -19,7 +19,7 @@
     <table>
 
     </table>
-    {% if job.user_started_log(session['user']) %}
+    {% if job.user_started_log(session['login_details']['person_ID']) %}
     <input type="submit" name="timer" value="Stop">
     {% else %}
     <input type="submit" name="timer" value="Start">

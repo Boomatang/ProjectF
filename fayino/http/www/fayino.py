@@ -74,7 +74,7 @@ def private_home():
 @app.route('/user/review/<added_user>', methods=['POST', 'GET'])
 @login_required
 def user_review(added_user):
-    new_user = User(added_user)
+    new_user = User(session['login_details'], added_user)
 
     return render_template('private/users/review.html', new_user=new_user)
 
@@ -83,7 +83,7 @@ def user_review(added_user):
 @login_required
 def user_create():
     form = siteForms.CreateNewUser(request.form)
-    user_name = sql_functions.get_sudo_username()
+    user_name = sql_functions.get_sudo_username(session['login_details'])
     password = password_gen()
 
     if request.method == 'POST' and form.validate():
@@ -98,8 +98,8 @@ def user_create():
                        last_name,
                        crypt.encrypt(password))
 
-        if sql_functions.check_new_username_and_email(new_user_name, email):
-            added_user = sql_functions.add_user(information)
+        if sql_functions.check_new_username(new_user_name, session['login_details']):
+            added_user = sql_functions.add_user(information, session['login_details'])
             return redirect(url_for('user_review', added_user=added_user))
         else:
             flash('User name and or email has been used before')
@@ -125,22 +125,23 @@ def job_main_details(job_number):
 
     job_number_sql = (int(year), int(number))
 
-    job = Job(job_number_sql)
+    job = Job(job_number_sql, session['login_details'])
 
     form = Form(request.form)
     if request.method == 'POST':
-        user = session['user']
+        if sql_functions.verify_user_company_schema(session['login_details']):
+            user = session['login_details']['person_ID']
 
-        if request.form['timer'] == 'Start':
-            start_time = job.start_time_entry(user)
-            flash(start_time.strftime('%Y/%m/%d %H:%M'))
-            flash(user)
+            if request.form['timer'] == 'Start':
+                start_time = job.start_time_entry(user)
+                flash(start_time.strftime('%Y/%m/%d %H:%M'))
+                flash(user)
 
-        elif request.form['timer'] == 'Stop':
-            finish_time = job.user_stop_log(user)
-            flash(finish_time.strftime('%Y/%m/%d %H:%M'))
+            elif request.form['timer'] == 'Stop':
+                finish_time = job.user_stop_log(user)
+                flash(finish_time.strftime('%Y/%m/%d %H:%M'))
 
-            flash(user)
+                flash(user)
 
         return redirect(url_for('job_main_details', job_number=job.job_number))
 
@@ -154,11 +155,12 @@ def jobs_list():
     Gives a list of all the jobs.
     Fillers will be added at a later date but for now this is all it does.
     """
+    # FIXME This page brakes if there is no jobs in the database
     job_list = []
-    number_list = sql_functions.get_all_job_numbers()
+    number_list = sql_functions.get_all_job_numbers(session['login_details'])
 
     for number in number_list:
-        job_list.append(Job(number))
+        job_list.append(Job(number, session['login_details']))
 
     return render_template('private/jobs/list.html', job_list=job_list)
 
@@ -172,7 +174,7 @@ def new_job_overview():
     """
     job_number = session['temp_job_number']
 
-    job = Job(job_number)
+    job = Job(job_number, session['login_details'])
     session.pop('temp_job_number', None)
 
     return render_template('private/jobs/jobOverView.html', job=job)
@@ -180,7 +182,7 @@ def new_job_overview():
 
 @app.route('/createNewJob/', methods=['POST', 'GET'])
 @login_required
-def CreateJobPage():
+def create_job_page():
     """
     Code to make a job in the basic form is here
     :return:
@@ -194,10 +196,10 @@ def CreateJobPage():
 
         values = [title, description, cost, length]
 
-        job_number = sql_functions.create_job(values)
+        job_number = sql_functions.create_job(values, session['login_details'])
         session['temp_job_number'] = job_number
 
-        return redirect('/newjoboverview/')
+        return redirect(url_for('new_job_overview'))
 
     return render_template('private/jobs/create.html', form=form)
 
@@ -223,16 +225,19 @@ def login():
     session.clear()
     form = siteForms.LoginConfirm(request.form)
     if request.method == 'POST':
-        data, confirm, input_email = login_action(form)
+        data, confirm, = login_action(form)
 
         if confirm:
-            # check_session(input_email)
-            user = User(data[0])
+            company_schema = sql_functions.get_company_schema(data[2])
+            person_ID = sql_functions.get_company_person_ID(data[0], company_schema)
 
-            session['user'] = user.id
+            login_details = {'user_ID': data[0],
+                             'company_ID': data[2],
+                             'company_schema': company_schema,
+                             'person_ID': person_ID}
+            session.clear()
+            session['login_details'] = login_details
             session['logged_in'] = True
-
-            # login_user(user)
 
             flash('Logged in successfully.')
             return redirect('/home/')
