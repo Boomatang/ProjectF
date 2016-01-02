@@ -128,3 +128,21 @@ class CreateNewUser(Form):
                             validators=[validators.input_required(),
                                         validators.length(min=6, max=150),
                                         validators.email()])
+
+
+class ClientCompany(AddressForm):
+
+    company_name = StringField(u'Company Name',
+                             validators=[validators.input_required(),
+                                         validators.length(min=3, max=100)])
+    sort_code = StringField(u'Company Sort Code',
+                             validators=[validators.input_required(),
+                                         validators.length(min=2, max=10)])
+    company_email = StringField(u'Default Email address',
+                            validators=[validators.required(),
+
+                                validators.length(min=6, max=150),
+                                        validators.email()])
+    company_phone = StringField(u'Default Phone Number',
+                             validators=[validators.optional(),
+                                 validators.length(min=3, max=100)])

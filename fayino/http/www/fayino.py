@@ -8,7 +8,7 @@ from wtforms import Form
 
 import siteForms
 import sql_functions
-from siteForms import AddressForm, Signup, Set_up_company
+from siteForms import AddressForm, Signup, Set_up_company, ClientCompany
 from site_actions import login_action, User, Job, password_gen
 
 # ####################      Set up        ########################
@@ -51,6 +51,34 @@ def testing():
         flash(address)
         return redirect('/')
     return render_template("jinja/child.html", form=form)
+
+
+# ####################      Client Company Related Pages        ########################
+
+@app.route('/client/create/', methods=['POST', 'GET'])
+@login_required
+def client_create():
+
+    form = ClientCompany(request.form)
+
+    if request.method == 'POST' and form.validate():
+        values = {}
+        values['address'] = {}
+        values['name'] = thwart(form.company_name.data)
+        values['sort'] = thwart(form.sort_code.data)
+        values['email'] = thwart(form.company_email.data)
+        values['phone'] = thwart(form.company_phone.data)
+        values['address']['line1'] = thwart(form.address_line1.data)
+        values['address']['line2'] = thwart(form.address_line2.data)
+        values['address']['town'] = thwart(form.address_town.data)
+        values['address']['county'] = thwart(form.address_county.data)
+        values['address']['country'] = thwart(form.address_country.data)
+        values['address']['postcode'] = thwart(form.address_postcode.data)
+
+
+        flash(values)
+        return redirect(url_for('private_home'))
+    return render_template('/private/client/create.html', form=form)
 
 
 # ####################      Private Related Pages        ########################

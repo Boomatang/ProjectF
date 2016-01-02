@@ -1,0 +1,20 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+<h1>Creating a Client Company</h1>
+<p>This form is not in any order and some fields are not required. The address entered on this page will be used by default. Long with the email and phone number if one is entered.  </p>
+    <form id="createJob" method="post">
+
+    <table>
+    {% for field in form %}
+
+        {{form_field(field)}}
+
+    {% endfor %}
+
+    </table>
+    <input class='btn btn-primary' type="submit" name="Next Step" value="Enter">
+    <input class='btn btn-success' type="submit" name="Next Step" value="Add Client Contacts">
+</form>
+
+{% endblock %}
