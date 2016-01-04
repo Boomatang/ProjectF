@@ -447,6 +447,7 @@ class ClientCompany(object):
         self.id = data[0]
         self.sort_code = data[2]
         self.data_set = data_set
+        self.default_email = self.get_default_email()
 
     def get_details(self, client_id):
         sql = u'SELECT client_company_ID, name, sort_code ' \
@@ -465,6 +466,13 @@ class ClientCompany(object):
             conn_close(c, conn)
 
         return output
+
+    def get_default_email(self):
+        """
+        This will get the current default email address for the company
+        """
+
+        return email_address
 
 
     def add_communication(self, values=None):

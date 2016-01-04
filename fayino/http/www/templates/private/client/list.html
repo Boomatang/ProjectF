@@ -1,0 +1,16 @@
+{% extends "base/base.html" %}
+{% from "macros/formMacros.html" import form_field with context %}
+{% block content %}
+<h1>Client Companies</h1>
+<p>This page shows a list of all the client companies in the system. There is a link to direct the user to the client company homepage. That is the user company home page for that client company.</p>
+<br><hr>
+
+{% for client in client_list %}
+<p>{{ client.sort_code }}: {{ client.name }} <input type="hidden" name="{{ client.id }}" value="{{ client.id }}"><input  class="btn btn-primary" name="{{ client.id }}" form="page" value="View Client" type="submit"></p>
+{% endfor %}
+
+<form id="page" method="post" hidden></form>
+
+
+
+{% endblock %}

@@ -36,6 +36,26 @@ def conn_close(c, conn):
     gc.collect()
 
 
+def get_client_companies_ids(login_details):
+    """
+    This function get the list of all the client companies. It really should be part of the company class
+    """
+    output = None
+    sql = u'SELECT client_company_ID ' \
+          u'FROM client_company_TBL;'
+
+    c, conn = connection(login_details['company_schema'])
+
+    try:
+        c.execute(sql)
+        values = c.fetchall()
+        if values is not None:
+            output = values
+    finally:
+        conn_close(c, conn)
+    return output
+
+
 def get_company_person_ID(master_ID, schema=None):
     """
     Get the ID of the company member that is logging in

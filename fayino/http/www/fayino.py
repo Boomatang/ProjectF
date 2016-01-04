@@ -56,9 +56,56 @@ def testing():
 
 # ####################      Client Company Related Pages        ########################
 
+@app.route('/client/<client_id>/homepage/', methods=['POST', 'GET'])
+@login_required
+def client_company_details(client_id):
+
+    """
+    This is the client company home page.
+    Here you can see things like the contact details, current jobs and client company members.
+    :param client_id:
+    """
+    client = site_actions.ClientCompany(client_id, session['login_details'])
+    form = Form(request.form)
+
+    return render_template('private/client/home.html',
+                           client=client,
+                           form=form)
+
+
+@app.route('/client/list/', methods=['POST', 'GET'])
+@login_required
+def view_client_companies():
+    """
+    Here the page shows all the client companies that are in the system.
+    A user can move more to see the home detail page for a client company.
+    """
+    form = Form(request.form)
+    client_ids = sql_functions.get_client_companies_ids(session['login_details'])
+
+    client_list = []
+    if client_ids:
+        for client in client_ids:
+            client_profile = site_actions.ClientCompany(client, session['login_details'])
+            client_list.append(client_profile)
+
+    if request.method == 'POST':
+        for clients in client_list:
+            if str(clients.id) in request.form:
+                return redirect(url_for('client_company_details', client_id=clients.id))
+
+    return render_template('/private/client/list.html',
+                           client_list=client_list,
+                           form=form)
+
+
 @app.route('/client/create/', methods=['POST', 'GET'])
 @login_required
 def client_create():
+    """
+    This page will add a client company to the user company and will redirect to view the clients home page.
+    :return:
+    """
     form = ClientCompany(request.form)
 
     if request.method == 'POST' and form.validate():
