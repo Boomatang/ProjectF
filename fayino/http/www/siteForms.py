@@ -18,7 +18,7 @@ class AddressForm(Form):
     address_county = StringField(u'County/Province',
                                  validators=[validators.input_required()])
     address_country = SelectField(u'Country',
-                                  choices=[('fist', '1st'), ('second', '2nd'), ('thired', '3rd')],
+                                  choices=[('fist', 'Ireland'), ('second', 'England'), ('third', 'Wales')],
                                   validators=[validators.input_required()])
     address_postcode = StringField(u'Postcode/Zip code',
                                    validators=[validators.optional()])

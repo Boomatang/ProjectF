@@ -1,9 +1,8 @@
 import datetime
 import gc
 import string
-from random import randint, choice
 import time
-
+from random import randint, choice
 import pymysql
 
 master = 'login_master_files'
@@ -110,8 +109,8 @@ def add_user_to_company_member_tbl(login_details, username='username'):
                       u'login_master_ID, join_date, accept_terms, username) ' \
                       u'VALUES (%s, %s, %s, %s)'
 
-    add_email = u'INSERT INTO email_TBL ' \
-                u'(`email_address`, `main`, `person_ID`) ' \
+    add_email = u'INSERT INTO communication_TBL ' \
+                u'(`detail`, `main`, `person_ID`) ' \
                 u'VALUES (%s, 1, %s)'
 
     get_user_ID_sql = u'SELECT person_ID ' \
@@ -166,6 +165,16 @@ def create_company_schema_tables(schema_name=None):
               u'SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;',
               u'SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;']
 
+    client_company_tbl = u'CREATE TABLE IF NOT EXISTS `client_company_TBL` (' \
+                         u'`client_company_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
+                         u'`name` VARCHAR(100) NOT NULL, ' \
+                         u'`sort_code` VARCHAR(6), ' \
+                         u'PRIMARY KEY (`client_company_ID`), ' \
+                         u'UNIQUE INDEX `client_company_ID_UNIQUE` ' \
+                         u'(`client_company_ID` ASC)) ' \
+                         u'ENGINE = InnoDB ' \
+                         u'DEFAULT CHARACTER SET = utf8;'
+
     member_tbl = u'CREATE TABLE IF NOT EXISTS `member_TBL` ( ' \
                  u'`person_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
                  u'`first_name` VARCHAR(45) NULL DEFAULT NULL, ' \
@@ -181,6 +190,48 @@ def create_company_schema_tables(schema_name=None):
                  u'UNIQUE INDEX `user_name_UNIQUE` (`username` ASC)) ' \
                  u'ENGINE = InnoDB ' \
                  u'DEFAULT CHARACTER SET = utf8;'
+
+    communication_tbl = u'CREATE TABLE IF NOT EXISTS `communication_TBL` (' \
+                        u'`communication_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
+                        u'`detail` VARCHAR(150) NOT NULL, ' \
+                        u'`location_type` VARCHAR(45) NULL DEFAULT NULL COMMENT "This for home, work, that kind of type. Should allow custom", ' \
+                        u'`main` TINYINT(1) NULL DEFAULT NULL, ' \
+                        u'`person_ID` INT(11) NULL DEFAULT NULL, ' \
+                        u'`client_company_ID` INT(11) NULL DEFAULT NULL, ' \
+                        u'`communication_type` VARCHAR(15) NOT NULL DEFAULT "email" COMMENT "To set type as email, phone, fax. May allow custom", ' \
+                        u'PRIMARY KEY (`communication_ID`), ' \
+                        u'UNIQUE INDEX `communication_ID_UNIQUE` (`communication_ID` ASC), ' \
+                        u'CONSTRAINT `person_communication_FK` ' \
+                        u'FOREIGN KEY (`person_ID`) ' \
+                        u'REFERENCES `member_TBL` (`person_ID`), ' \
+                        u'CONSTRAINT `client_communication_FK` ' \
+                        u'FOREIGN KEY (`client_company_ID`) ' \
+                        u'REFERENCES `client_company_TBL` (`client_company_ID`)) ' \
+                        u'ENGINE = InnoDB ' \
+                        u'DEFAULT CHARACTER SET = utf8;'
+
+    address_tbl = u'CREATE TABLE IF NOT EXISTS `address_TBL` (' \
+                  u'`address_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
+                  u'`line_1` VARCHAR(50), ' \
+                  u'`line_2` VARCHAR(50), ' \
+                  u'`city` VARCHAR(50), ' \
+                  u'`county` VARCHAR(50), ' \
+                  u'`country` VARCHAR(50), ' \
+                  u'`type` VARCHAR(15) COMMENT "Example type would be home, company, po box", ' \
+                  u'`billing_address` TINYINT(1) NOT NULL DEFAULT 0, ' \
+                  u'`main_address` TINYINT(1) NOT NULL DEFAULT 0 COMMENT"This the default address, word default can not be used", ' \
+                  u'`person_ID` INT(11) NULL DEFAULT NULL, ' \
+                  u'`client_company_ID` INT(11) NULL DEFAULT NULL, ' \
+                  u'PRIMARY KEY (`address_ID`), ' \
+                  u'UNIQUE INDEX `address_ID_UNIQUE` (`address_ID` ASC), ' \
+                  u'CONSTRAINT `person_address_FK` ' \
+                  u'FOREIGN KEY (`person_ID`) ' \
+                  u'REFERENCES `member_TBL` (`person_ID`), ' \
+                  u'CONSTRAINT `client_address_FK` ' \
+                  u'FOREIGN KEY (`client_company_ID`) ' \
+                  u'REFERENCES `client_company_TBL` (`client_company_ID`)) ' \
+                  u'ENGINE = InnoDB ' \
+                  u'DEFAULT CHARACTER SET = utf8; '
 
     job_tbl = u'CREATE TABLE IF NOT EXISTS `job_TBL` (' \
               u'`job_ID_year` INT(4) NOT NULL, ' \
@@ -214,21 +265,6 @@ def create_company_schema_tables(schema_name=None):
                        u'ENGINE = InnoDB ' \
                        u'DEFAULT CHARACTER SET = utf8; '
 
-    email_tbl = u'CREATE TABLE IF NOT EXISTS `email_TBL` (' \
-                u'`email_ID` INT(11) AUTO_INCREMENT NOT NULL, ' \
-                u'`email_address` VARCHAR(150) NOT NULL, ' \
-                u'`email_type` VARCHAR(45) NULL DEFAULT NULL, ' \
-                u'`main` TINYINT(1) NULL DEFAULT NULL, ' \
-                u'`person_ID` INT(11) NULL DEFAULT NULL, ' \
-                u'`client_company_ID` INT(11) NULL DEFAULT NULL, ' \
-                u'PRIMARY KEY (`email_ID`), ' \
-                u'UNIQUE INDEX `email_ID_UNIQUE` (`email_ID` ASC), ' \
-                u'CONSTRAINT `per_email_FK` ' \
-                u'FOREIGN KEY (`person_ID`) ' \
-                u'REFERENCES `member_TBL` (`person_ID`)) ' \
-                u'ENGINE = InnoDB ' \
-                u'DEFAULT CHARACTER SET = utf8;'
-
     member_linked_jobs_tbl = u'CREATE TABLE IF NOT EXISTS `member_linked_jobs_TBL` (' \
                              u'`job_ID_year` INT(4) NOT NULL, ' \
                              u'`job_ID_number` INT(6) NOT NULL, ' \
@@ -246,27 +282,27 @@ def create_company_schema_tables(schema_name=None):
                              u'REFERENCES `job_TBL` ' \
                              u'(`job_ID_year` , `job_ID_number`)) ' \
                              u'ENGINE = InnoDB ' \
-                             u'DEFAULT CHARACTER SET = utf8; ' \
-
-    tables = [member_tbl, email_tbl, job_tbl, job_time_log_tbl, member_linked_jobs_tbl]
+                             u'DEFAULT CHARACTER SET = utf8; '
+    tables = [client_company_tbl,
+              member_tbl,
+              communication_tbl,
+              address_tbl,
+              job_tbl,
+              job_time_log_tbl,
+              member_linked_jobs_tbl]
+    sql = [top, tables, bottom]
 
     c, conn = connection(schema_name)
 
-    def add_table(table_name):
-        c.execute(table_name)
+    def run_script(sql_script):
+        c.execute(sql_script)
         conn.commit()
 
     try:
 
-        for line in top:
-            add_table(line)
-
-        for line in tables:
-            add_table(line)
-
-        for line in bottom:
-            add_table(line)
-
+        for list_e in sql:
+            for script in list_e:
+                run_script(script)
     finally:
         conn_close(c, conn)
 
@@ -403,7 +439,6 @@ def sign_up_user(user):
     password_set = int(time.time())
 
     data = (user[1], user[2], accept_date, join_date, password_set)
-
 
     c.execute(sql, data)
     conn.commit()
@@ -829,8 +864,8 @@ def add_user(data_set, login_details):
                     u'FROM member_TBL ' \
                     u'WHERE login_master_ID = %s'
 
-    add_email = u'INSERT INTO email_TBL ' \
-                u'(`email_address`, `main`, `person_ID`) ' \
+    add_email = u'INSERT INTO communication_TBL ' \
+                u'(`detail`, `main`, `person_ID`) ' \
                 u'VALUES (%s, 1, %s)'
 
     joinDate = datetime.date.today()
@@ -867,8 +902,8 @@ def add_user(data_set, login_details):
                 if value is not None:
                     person_ID = value[0]
 
-                add_email_data = (data_set[1], person_ID)
-                c.execute(add_email, add_email_data)
+                    add_email_data = (data_set[1], person_ID)
+                    c.execute(add_email, add_email_data)
 
         finally:
             conn_close(mc, mconn)

@@ -136,10 +136,11 @@ class User(object):
         :return: an email address
         """
         email = 'error@error.error'
-        sql = u'SELECT email_address ' \
-              u'FROM email_TBL ' \
+        sql = u'SELECT detail ' \
+              u'FROM communication_TBL ' \
               u'WHERE person_ID = %s ' \
-              u'AND main = 1'
+              u'AND main = 1 ' \
+              u'AND communication_type = "email"'
         data = (self.login_details['person_ID'])
 
         if verify_user_company_schema(self.login_details):
@@ -402,3 +403,203 @@ class Job(object):
 
     def __repr__(self):
         return '<Job: %r>' % (self.title)
+
+
+class ClientCompany(object):
+    """
+    This class is for the company. Its the new style from me.
+
+    ALl values should be passed in with a dict that has the following format.
+    *** values input dict ***
+
+    'name': '',
+    'code': '',
+    'ID': 0,
+    'comm': [{}]
+    'address': [{}]
+
+    The comm {} format is
+        'detail':'',
+        'main': 0,
+        'type': ''
+
+    The address {} format is
+        'line1': '',
+        'line2': '',
+        'town': '',
+        'county': '',
+        'country': '',
+        'postcode':'',
+        'billing': 0
+        'default: 0'
+    *************************
+    """
+
+    def __init__(self, client_id, login_details, data_set=None):
+
+        """
+        This is the setting function
+        :type login_details: Standard
+        """
+        self.schema = login_details['company_schema']
+        data = self.get_details(client_id)
+        self.name = data[1]
+        self.id = data[0]
+        self.sort_code = data[2]
+        self.data_set = data_set
+
+    def get_details(self, client_id):
+        sql = u'SELECT client_company_ID, name, sort_code ' \
+              u'FROM client_company_TBL ' \
+              u'WHERE client_company_ID = %s'
+
+        data = (client_id,)
+        output = None
+        c, conn = connection(self.schema)
+        try:
+            c.execute(sql, data)
+            value = c.fetchone()
+            if value is not None:
+                output = value
+        finally:
+            conn_close(c, conn)
+
+        return output
+
+
+    def add_communication(self, values=None):
+        """
+        Add a communication entry is added here. This could be email, phone or fax
+        The values should be a dict
+        :param values: Should be a dict
+        """
+
+        if values is None:
+            values = self.data_set['comm']
+        c, conn = connection(self.schema)
+
+        sql = u'INSERT INTO communication_TBL ' \
+              u'(detail, main, client_company_ID, communication_type) ' \
+              u'VALUES (%s, %s, %s, %s);'
+
+        try:
+            for comm in values:
+                if len(comm['detail']) == 0:
+                    pass
+                else:
+                    data = (comm['detail'], comm['main'], self.id, comm['type'])
+                    c.execute(sql, data)
+        finally:
+            conn_close(c, conn)
+
+    def add_address(self, address_list=None):
+        """
+        Here we are adding an address there can be more than one but only one default
+        :param client_id:
+        :param address:
+        """
+        sql = u' INSERT INTO address_TBL ' \
+              u'(line_1, line_2, city, county, country, billing_address, main_address, client_company_ID) ' \
+              u'VALUES (%s, %s, %s, %s, %s, %s, %s, %s);'
+        if address_list is None:
+            address_list = self.data_set['address']
+
+        c, conn = connection(self.schema)
+
+        try:
+            for address in address_list:
+                if address['line_2'] is None:
+                    address['line_2'] = 'NULL'
+                if address['billing'] is None:
+                    address['billing'] = 0
+                if address['default'] is None:
+                    address['default'] = 0
+
+                data = (address['line_1'],
+                        address['line_2'],
+                        address['city'],
+                        address['county'],
+                        address['country'],
+                        address['billing'],
+                        address['default'],
+                        self.id)
+
+                c.execute(sql, data)
+        finally:
+            conn_close(c, conn)
+
+
+    @classmethod
+    def create_client(cls, values, login_details):
+        """
+        This function will construct the company if it does not exist in the client company database.
+        It will do this by magic
+        :param login_details: Common across all settings
+        :param values: Values used to set up client
+        """
+        client_id = None
+        c, conn = connection(login_details['company_schema'])
+
+        def sort_code_unique(sort_code):
+            """
+            Checks to see if the sort_code is Unique
+            :param sort_code:
+            """
+            output = False
+            sql = u'SELECT sort_code ' \
+                  u'FROM client_company_TBL ' \
+                  u'WHERE sort_code = %s;'
+            data = (sort_code,)
+            c.execute(sql, data)
+            test = c.fetchone()
+
+            if test is None:
+                output = True
+
+            return output
+
+        def add_client(name, sort_code):
+            """
+            Adds the client to the client company table in the user company database
+            :param name: String name of the client company
+            :param sort_code: String sort code for the client company
+            """
+
+            sql = u'INSERT INTO client_company_TBL ' \
+                  u'(name, sort_code) ' \
+                  u'VALUES (%s, %s);'
+            data = (name, sort_code)
+            c.execute(sql, data)
+            conn.commit()
+
+        def get_client_id(name, sort_code):
+            """
+            Will return the ID for the client company that has just been added
+            :param name:
+            :param sort_code:
+            """
+            output = None
+
+            sql = u'SELECT client_company_ID ' \
+                  u'FROM client_company_TBL ' \
+                  u'WHERE name = %s ' \
+                  u'AND sort_code = %s'
+
+            data = (name, sort_code)
+            c.execute(sql, data)
+            value = c.fetchone()
+            if value is not None:
+                output = value[0]
+
+            return output
+
+        try:
+            if sort_code_unique(values['code']):
+                add_client(values['name'], values['code'])
+                client_id = get_client_id(values['name'], values['code'])
+        finally:
+            conn_close(c, conn)
+        return cls(client_id, login_details)
+
+    def __repr__(self):
+        return '<Client Company: %r>' % (self.name,)

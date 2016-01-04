@@ -10,6 +10,7 @@ import siteForms
 import sql_functions
 from siteForms import AddressForm, Signup, Set_up_company, ClientCompany
 from site_actions import login_action, User, Job, password_gen
+import site_actions
 
 # ####################      Set up        ########################
 
@@ -58,25 +59,37 @@ def testing():
 @app.route('/client/create/', methods=['POST', 'GET'])
 @login_required
 def client_create():
-
     form = ClientCompany(request.form)
 
     if request.method == 'POST' and form.validate():
         values = {}
-        values['address'] = {}
+        values['address'] = []
+        values['comm'] = []
         values['name'] = thwart(form.company_name.data)
-        values['sort'] = thwart(form.sort_code.data)
-        values['email'] = thwart(form.company_email.data)
+        values['code'] = thwart(form.sort_code.data)
         values['phone'] = thwart(form.company_phone.data)
-        values['address']['line1'] = thwart(form.address_line1.data)
-        values['address']['line2'] = thwart(form.address_line2.data)
-        values['address']['town'] = thwart(form.address_town.data)
-        values['address']['county'] = thwart(form.address_county.data)
-        values['address']['country'] = thwart(form.address_country.data)
-        values['address']['postcode'] = thwart(form.address_postcode.data)
+        values['address'].append({'line_1': thwart(form.address_line1.data),
+                                  'line_2': thwart(form.address_line2.data),
+                                  'city': thwart(form.address_town.data),
+                                  'county': thwart(form.address_county.data),
+                                  'country': thwart(form.address_country.data),
+                                  'postcode': thwart(form.address_postcode.data),
+                                  'billing': 1,
+                                  'default': 1})
 
+        values['comm'].append({'detail': thwart(form.company_email.data),
+                               'main': 1,
+                               'type': 'email'})
+        values['comm'].append({'detail': thwart(form.company_phone.data),
+                               'main': 1,
+                               'type': 'phone'})
 
-        flash(values)
+        client = site_actions.ClientCompany.create_client(values, session['login_details'])
+        client.add_address(address_list=values['address'])
+        client.add_communication(values=values['comm'])
+
+        flash(client.name)
+
         return redirect(url_for('private_home'))
     return render_template('/private/client/create.html', form=form)
 
