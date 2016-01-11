@@ -56,4 +56,22 @@
 <p>{{ user.username }} : <input type="checkbox" form="Job" name="user{{user.id}}" value="{{ user.id }}"></p>
 {% endfor %}
 <input class="btn btn-success" type="submit" form="Job" name="timer" value="Assign">
+
+<br><hr>
+<h3>Client Company Section</h3>
+{% if job.company_assigned %}
+{{ job.company_id }}
+{% else %}
+{% for client_company in client_company_list %}
+<p>{{ client_company.name }}
+    <input type="radio" form="Job" name="{{ client_company.id }}" value="{{ client_company.id }}">
+</p>
+{% endfor %}
+    <input class="btn btn-success" type="submit" form="Job" name="timer" value="Assign company">
+
+{% endif %}
+
+
+
+
 {% endblock %}

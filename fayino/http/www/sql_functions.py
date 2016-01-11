@@ -303,13 +303,26 @@ def create_company_schema_tables(schema_name=None):
                              u'(`job_ID_year` , `job_ID_number`)) ' \
                              u'ENGINE = InnoDB ' \
                              u'DEFAULT CHARACTER SET = utf8; '
+    client_com_link_jobs = u'CREATE TABLE IF NOT EXISTS `client_com_link_jobs_TBL` (' \
+                           u'`job_ID_year` INT(4) NOT NULL, ' \
+                           u'`job_ID_number` INT(6) NOT NULL, ' \
+                           u'`client_company_ID` INT(11) NOT NULL, ' \
+                           u'CONSTRAINT `client_com_link_jobs_FK` ' \
+                           u'FOREIGN KEY (`job_ID_year` , `job_ID_number`) ' \
+                           u'REFERENCES `job_TBL`(`job_ID_year` , `job_ID_number`), ' \
+                           u'CONSTRAINT `client_com_link_job_FK` ' \
+                           u'FOREIGN KEY (`client_company_ID`) ' \
+                           u'REFERENCES `client_company_TBL` (`client_company_ID`)) ' \
+                           u'ENGINE = InnoDB  ' \
+                           u'DEFAULT CHARACTER SET = utf8; '
     tables = [client_company_tbl,
               member_tbl,
               communication_tbl,
               address_tbl,
               job_tbl,
               job_time_log_tbl,
-              member_linked_jobs_tbl]
+              member_linked_jobs_tbl,
+              client_com_link_jobs]
     sql = [top, tables, bottom]
 
     c, conn = connection(schema_name)

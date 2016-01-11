@@ -221,6 +221,7 @@ class Job(object):
         self.total_time = self.get_times()
         self.user_view_running = self.user_started_log(user_id)
         self.timed_user_ids = self.user_with_time()
+        self.company_assigned, self.company_id = self.get_client_company_id()
 
     @staticmethod
     def _format_job_number(job):
@@ -404,6 +405,54 @@ class Job(object):
     def __repr__(self):
         return '<Job: %r>' % (self.title)
 
+    def add_client_company(self, client_id):
+        """
+        Set the client id as the company of the job. There can only be one company id pre job.
+        :param client_id:
+        :return:
+        """
+
+        sql = u'INSERT INTO client_com_link_jobs_TBL ' \
+              u'(job_ID_year, job_ID_number, client_company_ID) ' \
+              u'VALUES (%s, %s, %s);'
+
+        data = (self.job_number_sql[0], self.job_number_sql[1], client_id)
+
+        c, conn = connection(self.company_schema)
+
+        try:
+            c.execute(sql, data)
+
+        finally:
+            conn_close(c, conn)
+
+    def get_client_company_id(self):
+        """
+        Gets the company id for the job and sets company assigned to true
+        :return:
+        """
+        output = False
+        value_out = False
+
+        sql = u'SELECT client_company_ID ' \
+              u'FROM client_com_link_jobs_TBL ' \
+              u'WHERE job_ID_year = %s ' \
+              u'AND job_ID_number = %s;'
+
+        data = (self.job_number_sql[0], self.job_number_sql[1])
+
+        c, conn = connection(self.company_schema)
+        try:
+            c.execute(sql, data)
+            values = c.fetchone()
+
+            if values is not None:
+                value_out = values[0]
+                output = True
+        finally:
+            conn_close(c, conn)
+
+        return output, value_out
 
 class ClientCompany(object):
     """
@@ -471,9 +520,28 @@ class ClientCompany(object):
         """
         This will get the current default email address for the company
         """
+        email_address = None
+        sql = u'SELECT detail ' \
+              u'FROM communication_TBL ' \
+              u'WHERE client_company_ID = %s ' \
+              u'AND communication_type = "email" ' \
+              u'AND main = 1'
+
+        data = (self.id,)
+
+        c, conn = connection(self.schema)
+
+        try:
+            c.execute(sql, data)
+
+            address = c.fetchone()
+            if address is not None:
+                email_address = address[0]
+
+        finally:
+            conn_close(c, conn)
 
         return email_address
-
 
     def add_communication(self, values=None):
         """
@@ -503,8 +571,7 @@ class ClientCompany(object):
     def add_address(self, address_list=None):
         """
         Here we are adding an address there can be more than one but only one default
-        :param client_id:
-        :param address:
+        :param address_list:
         """
         sql = u' INSERT INTO address_TBL ' \
               u'(line_1, line_2, city, county, country, billing_address, main_address, client_company_ID) ' \
@@ -535,7 +602,6 @@ class ClientCompany(object):
                 c.execute(sql, data)
         finally:
             conn_close(c, conn)
-
 
     @classmethod
     def create_client(cls, values, login_details):
@@ -611,3 +677,26 @@ class ClientCompany(object):
 
     def __repr__(self):
         return '<Client Company: %r>' % (self.name,)
+
+    @staticmethod
+    def all_companies(login_details):
+
+        """
+        This will return a list of all the companies ID numbers
+        :param login_details:
+        """
+        output = None
+        sql = u'SELECT client_company_ID ' \
+              u'FROM client_company_TBL;'
+
+        c, conn = connection(login_details)
+        try:
+            c.execute(sql)
+            values = c.fetchall()
+            if values is not None:
+                output = values
+        finally:
+            conn_close(c, conn)
+
+        return output
+

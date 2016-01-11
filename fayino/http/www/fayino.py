@@ -308,7 +308,8 @@ def job_main_details(job_number):
     job_number_sql = (int(year), int(number))
 
     job = Job(job_number_sql, login_details)
-
+    client_company_list = []
+    client_company_id_list = []
     # assigned users
     member_list = []
     id_list = sql_functions.job_assigned_users(login_details, job_number_sql)
@@ -336,6 +337,18 @@ def job_main_details(job_number):
             time_users.append((user_time.id,
                                user_time.username,
                                user_time.job_times(job.job_number_sql)))
+
+
+    # get the list of companies so that one can be added to the job.
+    if job.company_assigned:
+        pass
+    else:
+        company_id_list = site_actions.ClientCompany.all_companies(login_details['company_schema'])
+
+        for company in company_id_list:
+            client_company = site_actions.ClientCompany(company, login_details)
+            client_company_list.append(client_company)
+            client_company_id_list.append(company[0])
 
     # page form details
     form = Form(request.form)
@@ -373,8 +386,18 @@ def job_main_details(job_number):
 
                 for member_id in remove_member:
                     values = (job_number_sql[0], job_number_sql[1], member_id)
-
                     sql_functions.remove_users_from_job(values, login_details)
+
+            elif request.form['timer'] == 'Assign company' and client_company_list is not None:
+                for value in request.form:
+                    for client_id in client_company_id_list:
+                        try:
+                            if int(value) == client_id:
+                                job.add_client_company(int(value))
+                                flash(value)
+                        except ValueError:
+                            pass
+
         return redirect(url_for('job_main_details', job_number=job.job_number))
     current_user = User(session['login_details'])
 
@@ -384,6 +407,7 @@ def job_main_details(job_number):
                            member_list=member_list,
                            time_users=time_users,
                            current_user=current_user,
+                           client_company_list=client_company_list,
                            form=form)
 
 

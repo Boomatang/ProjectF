@@ -134,7 +134,19 @@ CREATE TABLE IF NOT EXISTS `company_schema_example`.`member_linked_jobs_TBL` (
  ENGINE = InnoDB 
  DEFAULT CHARACTER SET = utf8; 
 
-
+-- Client Company Linked Jobs Table
+CREATE TABLE IF NOT EXISTS `company_schema_example`.`client_com_link_jobs_TBL` (
+	 `job_ID_year` INT(4) NOT NULL, 
+	 `job_ID_number` INT(6) NOT NULL,
+     `client_company_ID` INT(11) NOT NULL,
+     CONSTRAINT `client_com_link_jobs_FK` 
+		FOREIGN KEY (`job_ID_year` , `job_ID_number`)
+		REFERENCES `job_TBL`(`job_ID_year` , `job_ID_number`),
+	 CONSTRAINT `client_com_link_job_FK`
+		FOREIGN KEY (`client_company_ID`)
+		REFERENCES `company_schema_example`.`client_company_TBL` (`client_company_ID`))
+ ENGINE = InnoDB 
+ DEFAULT CHARACTER SET = utf8;
 
 -- At bottom of script
 SET SQL_MODE=@OLD_SQL_MODE;
