@@ -8,4 +8,4 @@ confing = [
     'author': 'Boomatang
 ]
 
-setup(**config, requires=['flask']')
+setup(**config, requires=['flask', 'pymysql']')

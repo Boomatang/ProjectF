@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Public home page</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/foundation.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+</head>
+<body>
+
+<section>
+    {% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+</section>
+
+
+
+<h1>This is the main home page for the public</h1>
+<p>This is the main lading page for any new user that maybe becoming to view the site. It should a have an over view of
+the product as well as links to find more information.</p>
+<p>The links that we are looking at now are the <strong>Log in</strong> and <strong>Sign Up</strong></p>
+<p>This is where is starts.</p>
+<a href="/signup/"><input class="btn btn-success" type="button" value="Sign Up" NAME="Sign Up"></a>
+
+<a href="/login/"><input class="btn btn-success" type="button" value="Log In" NAME="Log in"></a>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% from "macros/navMacros.html" import nav_link with context %}
+
+<nav class="navbar navbar-inverse" role="navigation">
+  <ul class="nav navbar-nav">
+  {% if session['logged_in'] %}
+  {{ nav_link('private_home', 'Home') }}
+  {% else %}
+  {{ nav_link('publicHomePage', 'Home') }}
+  {% endif %}
+  {{ nav_link('create_job_page', 'Create Job') }}
+  {{ nav_link('jobs_list', 'Job Listings') }}
+  {{ nav_link('user_create', 'Add New User') }}
+  {{ nav_link('all_user_list', 'Members') }}
+
+  {{ nav_link('client_create', 'Add Client Company') }}
+  {{ nav_link('view_client_companies', 'Client Companies') }}
+
+
+  {{ nav_link('publicHomePage', 'About') }}
+  {{ nav_link('publicHomePage', 'Contact Us') }}
+
+  {% if session['logged_in'] %}
+  {{ nav_link('logout', 'Log out') }}
+  {% endif %}
+  </ul>
+</nav>
