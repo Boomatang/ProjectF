@@ -11,11 +11,9 @@ class Member(Person):
     This class is used to hold the higher functions of the lower classes.
     """
 
-    def __init__(self, foo):
-        super().__init__(foo)
+    def __init__(self):
+        super().__init__(1)
         self.schema = None
-        if foo != 1:
-            raise ValueError('foo is not equal to 1')
 
     def add_to_member_table(self, login_email, hashed_password, schema=None):
         """
@@ -44,18 +42,20 @@ class Member(Person):
             db.conn_close()
 
     @classmethod
-    def create_member(cls, user_name, user_email, password, schema):
+    def create_member(cls, user_name, user_email, password, new_company_id, schema):
         """
         Add a user to the main database.
+        :param company_id:
         :param schema:
         :param user_email:
         :param user_name:
         :param password:
         :return:
         """
-        def add_to_member_table(login_email, hashed_password, use_schema=None):
+        def add_to_member_table(login_email, hashed_password, company_id, use_schema=None):
             """
             This function adds user to the members table so that they can login
+            :param company_id:
             :type use_schema: object
             :param use_schema:
             :param login_email:
@@ -69,7 +69,7 @@ class Member(Person):
             join_date = str(join_date.year) + "-" + str(join_date.month) + "-" + str(join_date.day)
             password_set = int(time.time())
 
-            data = (login_email, hashed_password, accept_date, join_date, password_set)
+            data = (login_email, hashed_password, accept_date, join_date, password_set, company_id)
 
             db = database.Database(use_schema)
             try:
@@ -77,13 +77,13 @@ class Member(Person):
             finally:
                 db.conn_close()
 
-        def add_to_person_table():
+        def add_to_person_table(username, email):
             """
             This will and new person to the local person table
             """
 
-        add_to_member_table(user_email, password, schema)
-        add_to_person_table()
+        add_to_member_table(user_email, password, new_company_id, schema)
+        add_to_person_table(user_name, user_email)
 
 
 

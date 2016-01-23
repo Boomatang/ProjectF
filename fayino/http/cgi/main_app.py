@@ -1,6 +1,12 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, flash
+from pymysql import escape_string as thwart
 
 # ####################      Set up        ########################
+from wtforms import Form
+
+from cgi import member
+from cgi import site_forms
+from cgi import company
 
 app = Flask(__name__, template_folder='../templates', static_folder='../www/static/')
 
@@ -12,12 +18,32 @@ def login():
     return 'login'
 
 
-@app.route('/signup/')
+@app.route('/signup/', methods=['POST', 'GET'])
 def sign_up():
-    return 'Sign up'
+
+    form = site_forms.Signup(request.form)
+    if request.method == 'POST' and form.validate():
+
+        name = thwart(form.username.data)
+        email = thwart(form.email.data)
+        password = thwart(form.password.data)
+        re_password = thwart(form.confirm.data)
+        company_name = thwart(form.company_name.data)
+
+        if password == re_password and False:
+            # TODO hash password
+            schema = 'test_login_master_files'
+            new_company = company.Company.enter_company_detail(company_name)
+            user = member.Member.create_member(name, email, password, new_company.schema)
+            return 'next page'
+        else:
+            flash('Passwords do not match', 'error')
+            return render_template('sign_up/sign_up_form.html', form=form)
+
+    return render_template('sign_up/sign_up_form.html', form=form)
 
 
-@app.route('/')
+@app.route('/', methods=['POST', 'GET'])
 def index():
     return render_template('public/index.html')
 
