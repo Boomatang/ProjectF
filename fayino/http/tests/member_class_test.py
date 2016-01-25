@@ -3,9 +3,9 @@ from cgi.member import Member
 
 
 class PersonClassTest(unittest.TestCase):
-    def testInsufficientArgs(self):
-        foo = 0
-        self.failUnlessRaises(ValueError, Member, foo)
+    def member_exist(self):
+        m = Member()
+        self.assertIsNotNone(m)
 
     # TODO make test for add_to_member_table
     # TODO make test for create_member

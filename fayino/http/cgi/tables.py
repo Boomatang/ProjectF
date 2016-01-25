@@ -25,7 +25,7 @@ member_tbl = u'CREATE TABLE IF NOT EXISTS `member_TBL` ( ' \
              u'`DOB` DATE NULL DEFAULT NULL, ' \
              u'`join_date` DATE NULL DEFAULT NULL, ' \
              u'`accept_terms` DATE NOT NULL, ' \
-             u'`login_master_ID` INT(11) NOT NULL, ' \
+             u'`login_master_ID` INT(11) NULL, ' \
              u'PRIMARY KEY (`person_ID`), ' \
              u'UNIQUE INDEX `person_ID_UNIQUE` (`person_ID` ASC), ' \
              u'UNIQUE INDEX `login_master_ID_UNIQUE` (`login_master_ID` ASC),' \

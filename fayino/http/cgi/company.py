@@ -3,6 +3,7 @@ import string
 from random import choice, randint
 
 from cgi import database
+from cgi import tables
 
 
 def gen_schema():
@@ -39,6 +40,7 @@ class Company(object):
 
         data = (company, set_up_date, company_schema)
 
+        # TODO change schema for real value
         db = database.Database('test_login_master_files')
 
         db.execute(sql, data)
@@ -49,6 +51,9 @@ class Company(object):
                          u'WHERE company_schema = %s'
 
         company_id_data = (company_schema,)
+        db.create_schema(company_schema)
+        cdb = database.Database(company_schema)
+        cdb.create_tables(tables.sql)
 
         db.execute(company_id_sql, company_id_data)
 
@@ -59,5 +64,6 @@ class Company(object):
             company_id = 'Error'
 
         db.conn_close()
+        cdb.conn_close()
 
-        return company_id, company_schema
+        return cls(company_id, company_schema)

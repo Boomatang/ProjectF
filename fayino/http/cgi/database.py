@@ -1,10 +1,12 @@
+import datetime
 import gc
+
 import pymysql
+
 from cgi.tables import sql as tables
 
 
 class Database(object):
-
     def __init__(self, schema):
         self.c, self.conn = self.connection(schema)
         self.execute = self.c.execute
@@ -37,7 +39,12 @@ class Database(object):
         gc.collect()
 
     def create_tables(self, sql):
+        """
+
+        :type schema: object
+        """
         passed = True
+
         for list_e in sql:
             for script in list_e:
                 passed = self.run_script(script)
@@ -54,6 +61,34 @@ class Database(object):
             self.conn.commit()
         except Exception:
             return False
+
+    def return_values(self, sql, data=None, number=1):
+
+        output = None
+        try:
+            if data is not None:
+                self.c.execute(sql, data)
+            else:
+                self.c.execute(sql)
+
+            if number == 1:
+                value = self.c.fetchone()
+
+                if value is not None:
+                    output = value[0]
+
+        finally:
+            self.conn_close()
+            return output
+
+    def create_schema(self, schema_name):
+
+        sql = 'CREATE SCHEMA ' + schema_name
+
+        self.run_script(sql)
+
+
+
 
 if __name__ == '__main__':
     d = Database('testing_main')

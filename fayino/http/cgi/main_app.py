@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request, flash, session
 from pymysql import escape_string as thwart
+from passlib.hash import sha256_crypt as crypt
+
 
 # ####################      Set up        ########################
 from wtforms import Form
@@ -30,11 +32,14 @@ def sign_up():
         re_password = thwart(form.confirm.data)
         company_name = thwart(form.company_name.data)
 
-        if password == re_password and False:
+        if password == re_password:
             # TODO hash password
-            schema = 'test_login_master_files'
+            password = crypt.encrypt(password)
             new_company = company.Company.enter_company_detail(company_name)
-            user = member.Member.create_member(name, email, password, new_company.schema)
+            user = member.Member.create_member(name, email, password, new_company.id, new_company.schema)
+
+            session['company'] = new_company.id
+            session['user'] = user.id
             return 'next page'
         else:
             flash('Passwords do not match', 'error')
